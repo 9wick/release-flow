@@ -8,9 +8,9 @@ release-flow は、`stg` に入った変更を Release PR で確認し、`main` 
 
 ![開発ブランチから stg、Release PR を経て main に進むリリースの流れと、main へ直接 PR を出す hotfix の流れ](docs/images/release-flow.svg)
 
-1. 開発ブランチの PR を **`stg` にマージ**します。`stg` から `main` への Release PR がドラフトで開き、前回のリリース以降の変更が本文に並びます。Release PR を開いたまま `stg` に変更を積むと、同じ PR の一覧が更新されます。
+1. 開発ブランチの PR を **`stg` にマージ**します。マージしたコミットがステージングにデプロイされます。`stg` から `main` への Release PR がドラフトで開き、前回のリリース以降の変更が本文に並びます。Release PR を開いたまま `stg` に変更を積むと、同じ PR の一覧が更新されます。
 2. **本番に出すと決めたら**、Release PR のタイトルで版を確認し、本文のリリースノート欄に利用者向けの変更を書きます。たとえば前回が `1.2.3` なら初期値は `1.2.4` です。minor や major を上げるときは、タイトルを `1.3.0` や `2.0.0` に変えます。
-3. **ドラフトを解除**し、`Release version and notes` が通ったら **`main` にマージ**します。マージが本番リリースの承認です。`stg` からの Release PR では **Create a merge commit** を選び、`stg` のコミット履歴を `main` に取り込みます。
+3. **ドラフトを解除**し、`Release version and notes` が通ったら **`main` にマージ**します。マージしたコミットを、その時点の版とリリースノートで本番に出す承認です。`stg` からの Release PR では **Create a merge commit** を選び、`stg` のコミット履歴を `main` に取り込みます。
 4. **`main` へのマージで本番デプロイ**が始まります。下の workflow 例では、成功後に `v1.2.4` のようなタグと GitHub Release を作ります。このタグを基に、次のリリースの版が提案されます。
 
 ### `stg` を通さずに出す（hotfix）
@@ -24,7 +24,7 @@ release-flow は、`stg` に入った変更を Release PR で確認し、`main` 
 ### 1. リポジトリを設定する
 
 - **Settings → Actions → General → Workflow permissions** で **Allow GitHub Actions to create and approve pull requests** を有効にします。
-- `main` への変更は PR 経由にします。`stg` の履歴を取り込めるよう、`main` 宛ての PR でマージコミットを使える設定にします。
+- `stg` と `main` への変更は PR 経由にします。`stg` の履歴を取り込めるよう、`main` 宛ての PR でマージコミットを使える設定にします。
 
 ### 2. workflow を配置する
 
@@ -84,22 +84,25 @@ jobs:
 
 #### 既存のデプロイにつなぐ
 
-`resolve` は、デプロイ先の環境・版・コミットを workflow に渡します。この例は `main`、`stg`、`develop` への push で実行し、本番デプロイの成功後に GitHub Release とタグを作ります。対象ブランチと `./scripts/deploy.sh` は、自分のリポジトリに合わせてください。環境ごとに workflow を分けている場合も、それぞれから `resolve` を呼べます。
+`resolve` は、デプロイ先の環境・版・コミットを workflow に渡します。この例では `stg` と `main` 宛ての PR をマージしたときに、マージ結果のコミットをデプロイします。本番デプロイの成功後に GitHub Release とタグを作ります。`./scripts/deploy.sh` は、自分のリポジトリのデプロイ手順に置き換えてください。
+
+開発環境へのデプロイが必要なら、`push` や `workflow_dispatch` で起動する workflow から `resolve` を呼べます。
 
 ```yaml
 # .github/workflows/deploy.yml
 name: Deploy
 on:
-  push:
-    branches: [main, stg, develop]
+  pull_request:
+    types: [closed]
+    branches: [main, stg]
 permissions:
   contents: write # to record the prod release
-  pull-requests: read # to find the release PR behind a push to main
 concurrency:
   group: deploy-${{ github.ref }}
   cancel-in-progress: false
 jobs:
   deploy:
+    if: ${{ github.event.pull_request.merged == true }}
     runs-on: ubuntu-latest
     steps:
       - id: release
@@ -132,7 +135,7 @@ jobs:
 
 すでに本番を運用している場合は、現在本番で動いているコミットに、現在の版のタグ（例 `v1.2.3`）があることを確認します。タグがなければそのコミットに付けます。リリースのタグが一つもない場合、最初の版の初期値は `0.0.1` です。
 
-[リリースの流れ](#リリースの流れ)に沿って、`stg` へのマージで Release PR が開き、本番デプロイの成功後にタグとリリースノート付きの GitHub Release が作られることを確認します。初回の `Release version and notes` が成功したら、`main` の必須チェックに追加します。[GitHub の必須ステータスチェック](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks)
+[リリースの流れ](#リリースの流れ)に沿って、`stg` へのマージでステージングデプロイが始まり、Release PR が開くことを確認します。初回の `Release version and notes` が成功したら、`main` の必須チェックに追加します。Release PR をマージしたら、そのコミットが本番にデプロイされ、タグとリリースノート付きの GitHub Release が作られることを確認します。[GitHub の必須ステータスチェック](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks)
 
 ## 設定とトラブルシューティング
 
@@ -206,17 +209,17 @@ GitHub Release に使うのは `notes` 内の文章です。欄内の HTML コ�
 
 #### `resolve`
 
-`push` では push 先、マージされた `pull_request` ではベースブランチ、マージ前の `pull_request` では PR の head ブランチから環境を決めます。
+マージされた `pull_request` ではベースブランチ、マージ前の `pull_request` では PR の head ブランチから環境を決めます。`push` や `workflow_dispatch` では workflow が実行されたブランチを使います。
 
 | きっかけ | `environment` | `version` | `sha` |
 | --- | --- | --- | --- |
-| 本番ブランチへの push、本番ブランチ宛ての PR のマージ | `prod` | マージした PR のタイトル | マージ結果のコミット |
-| ステージングブランチへの push、ステージングブランチ宛ての PR のマージ | `stg` | `1.2.4-stg.<UTC の日時>` | そのコミット |
+| 本番ブランチ宛ての PR のマージ | `prod` | マージ時点の PR タイトル | マージ結果のコミット |
+| ステージングブランチ宛ての PR のマージ、ステージングブランチへの `push` や `workflow_dispatch` | `stg` | `1.2.4-stg.<UTC の日時>` | マージ結果または実行対象のコミット |
 | ほかのブランチ | `dev` | `1.2.4-dev.<UTC の日時>` | そのコミット |
 
-`prod` のときは、`check` と同じ検証をもう一度行います。同じ版のタグが同じコミットにあるときは、やり直しとして通します。本番ブランチへの push に対応するマージ済み PR が見つからないときは失敗します。
+`prod` のときは、`check` と同じ検証をもう一度行います。同じ版のタグが同じコミットにあるときは、やり直しとして通します。
 
-権限は `contents: read` と `pull-requests: read` です。`pull-requests: read` は、push に対応するマージ済み PR の検索に使います。
+`resolve` はタグの参照に `contents: read` を使います。既存の workflow が本番ブランチへの `push` で起動する場合は、コミットに対応するマージ済み PR の検索に `pull-requests: read` も必要です。該当する PR が見つからない場合は失敗します。
 
 | 出力 | 説明 |
 | --- | --- |
@@ -257,17 +260,15 @@ GitHub Release に使うのは `notes` 内の文章です。欄内の HTML コ�
 その版はほかのコミットでリリース済みです。Release PR を開いている間に、hotfix が同じ版で出た場合に起きることがあります。
 
 - マージの前なら、タイトルをエラーに示された版に書き換えてください。
-- マージの後にデプロイで止まったなら、マージ済みの PR のタイトルを書き換えてから、デプロイの workflow をやり直してください。
-
-マージの後に タイトルを書き換える方法は、デプロイを `push` で動かしているときだけ効きます。`pull_request` の `closed` で動かしている場合、やり直しでも元のイベントのタイトルが使われます。
+- マージの後にデプロイで止まった場合、再実行ではマージ時点の版を使うため、競合は解消しません。新しい版で本番に出す内容を改めて承認してください。同じコミットを別の版で出す手順が必要なら、導入先で対象コミット・版・リリースノートを指定して承認する手動 workflow を用意します。
 
 #### 本番デプロイに失敗した
 
-Deploy workflow の **Re-run failed jobs** で失敗したジョブを再実行します。同じ版のタグが同じコミットに作られていれば、`resolve` は再実行として扱います。
+一時的な失敗なら、Deploy workflow の **Re-run failed jobs** で再実行します。PR マージで起動した実行は、マージ時点のコミット・版・リリースノートを使います。同じ版のタグが同じコミットに作られていれば、`resolve` は再実行として扱います。
 
 #### `<sha> on main did not come from a merged PR`
 
-PR を通らずに `main` へ push されたコミットです。版がないのでデプロイできません。`main` への直接の push を禁止してください。
+`main` への `push` で起動する既存の workflow で、コミットに対応するマージ済み PR が取得できなかったときに出ます。PR マージを起点にするには、上のデプロイ例に合わせて workflow を変更してください。
 
 #### fork からの PR で `check` が失敗する
 
