@@ -1,0 +1,23 @@
+name: Release check
+description: Check that a PR into the production branch names a new version in its title and has release notes in its description.
+inputs:
+  token:
+    description: Token for the GitHub API. PRs created with the default GITHUB_TOKEN do not trigger other workflows; pass a GitHub App token to run CI on them.
+    default: ${{ github.token }}
+  production-branch:
+    description: Branch that matches production.
+    default: main
+  staging-branch:
+    description: Branch that matches staging.
+    default: stg
+  tag-prefix:
+    description: Prefix of release tags. A release is recorded as the tag <prefix><major>.<minor>.<patch>.
+    default: v
+outputs:
+  version:
+    description: Version from the PR title, such as 1.2.3.
+  tag:
+    description: Tag the release will get, such as v1.2.3.
+runs:
+  using: node24
+  main: main.ts

@@ -1,0 +1,38 @@
+name: Deploy
+on:
+  push:
+    branches: [main, stg, develop]
+permissions:
+  contents: write # to record the prod release
+  pull-requests: read # to find the release PR behind a push to main
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - id: release
+        uses: 9wick/release-flow/resolve@v1
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ steps.release.outputs.sha }}
+          persist-credentials: false
+
+      - name: Deploy
+        env:
+          ENVIRONMENT: ${{ steps.release.outputs.environment }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: ./scripts/deploy.sh "$ENVIRONMENT" "$VERSION"
+
+      # The tag is the record of what prod runs, and the next release PR's version builds on it
+      - name: Record the prod release
+        if: ${{ steps.release.outputs.environment == 'prod' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ steps.release.outputs.tag }}
+          SHA: ${{ steps.release.outputs.sha }}
+          NOTES: ${{ steps.release.outputs.notes }}
+        run: gh release view "$TAG" > /dev/null 2>&1 || gh release create "$TAG" --target "$SHA" --title "$TAG" --notes "$NOTES"

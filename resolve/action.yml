@@ -1,0 +1,31 @@
+name: Resolve release
+description: Tell a deploy job which environment it targets, which commit to ship, and its version and release notes.
+inputs:
+  token:
+    description: Token for the GitHub API. PRs created with the default GITHUB_TOKEN do not trigger other workflows; pass a GitHub App token to run CI on them.
+    default: ${{ github.token }}
+  production-branch:
+    description: Branch that matches production.
+    default: main
+  staging-branch:
+    description: Branch that matches staging.
+    default: stg
+  tag-prefix:
+    description: Prefix of release tags. A release is recorded as the tag <prefix><major>.<minor>.<patch>.
+    default: v
+outputs:
+  environment:
+    description: prod for the production branch, stg for the staging branch, dev for any other branch.
+  version:
+    description: The release PR title on prod. On stg and dev, a preview such as 1.2.4-stg.20261123050000.
+  tag:
+    description: <tag-prefix><version>. Create it after a successful prod deploy so the next version builds on it.
+  notes:
+    description: The release PR description on prod, empty otherwise.
+  sha:
+    description: Commit to deploy. The merge commit for a merged PR.
+  pull-request-number:
+    description: The release PR on prod, empty otherwise.
+runs:
+  using: node24
+  main: main.ts

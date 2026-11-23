@@ -1,0 +1,28 @@
+name: Release PR
+description: Keep one release PR open from the staging branch to the production branch, listing the PRs it ships.
+inputs:
+  token:
+    description: Token for the GitHub API. PRs created with the default GITHUB_TOKEN do not trigger other workflows; pass a GitHub App token to run CI on them.
+    default: ${{ github.token }}
+  production-branch:
+    description: Branch that matches production.
+    default: main
+  staging-branch:
+    description: Branch that matches staging.
+    default: stg
+  tag-prefix:
+    description: Prefix of release tags. A release is recorded as the tag <prefix><major>.<minor>.<patch>.
+    default: v
+  draft:
+    description: Open a new release PR as a draft. Private repositories on the Free plan cannot use drafts.
+    default: "true"
+outputs:
+  pull-request-number:
+    description: Number of the release PR. Empty when staging has nothing new.
+  pull-request-url:
+    description: URL of the release PR. Empty when staging has nothing new.
+  created:
+    description: '"true" when this run opened the PR.'
+runs:
+  using: node24
+  main: main.ts
