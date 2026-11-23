@@ -1,125 +1,276 @@
 # release-flow
 
-main・stg・開発ブランチの3段構成で、PR を承認の場にしてリリースするための GitHub Actions です。版番号は PR の title、リリースノートは PR の description に書きます。リポジトリのファイルへ版を書き戻しません。
+[![CI](https://github.com/9wick/release-flow/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/9wick/release-flow/actions/workflows/ci.yml)
 
-デプロイそのものは利用側の workflow で書きます。このリポジトリが受け持つのは、Release PR を保つこと、版と原稿を検証すること、デプロイ先の環境と版を決めることの3つです。
+release-flow は、`stg` に入った変更を Release PR で確認し、`main` にマージして本番に出すための GitHub Actions です。次に出る変更は PR に自動でまとまり、リリースする版とリリースノートは人が決めます。デプロイは各リポジトリの workflow が行います。
 
-## 流れ
+## リリースの流れ
 
-![feature を stg に merge すると Release PR が開き、人が版と原稿を書いて merge すると prod に deploy されてタグが付く。hotfix は main へ直接 PR を出す](docs/images/release-flow.svg)
+![開発ブランチから stg、Release PR を経て main に進むリリースの流れと、main へ直接 PR を出す hotfix の流れ](docs/images/release-flow.svg)
 
-1. 開発ブランチの PR を stg にマージします。stg へデプロイされます。
-2. stg が更新されるたびに、`release-pr` が stg→main の Release PR を1件だけ開いておきます。
-   - 初回は draft で作り、title に既定値として「最新のリリース + patch」を入れます。人はこれを上書きできます。
-   - description には、原稿の区画と PR 一覧の区画を置きます。一覧の区画には、前回のリリースから stg にマージされた PR を bot が書きます。
-3. 人が必要なら title の版を上書きし(minor や major を上げるときなど)、原稿の区画に利用者向けの変更内容を書いて、draft を解除します。`check` が版と原稿を検証します。
-4. Release PR をマージすると main へデプロイされます。`resolve` が PR の title と description から版と原稿を返します。
-5. デプロイが成功したら、タグ `v<版>` を作ります(GitHub Release を作ればタグもできます)。次の Release PR の版はこのタグから決まります。
+1. 開発ブランチの PR を **`stg` にマージ**します。`stg` から `main` への Release PR がドラフトで開き、前回のリリース以降の変更が本文に並びます。Release PR を開いたまま `stg` に変更を積むと、同じ PR の一覧が更新されます。
+2. **本番に出すと決めたら**、Release PR のタイトルで版を確認し、本文のリリースノート欄に利用者向けの変更を書きます。たとえば前回が `1.2.3` なら初期値は `1.2.4` です。minor や major を上げるときは、タイトルを `1.3.0` や `2.0.0` に変えます。
+3. **ドラフトを解除**し、`Release version and notes` が通ったら **`main` にマージ**します。マージが本番リリースの承認です。`stg` からの Release PR では **Create a merge commit** を選び、`stg` のコミット履歴を `main` に取り込みます。
+4. **`main` へのマージで本番デプロイ**が始まります。下の workflow 例では、成功後に `v1.2.4` のようなタグと GitHub Release を作ります。このタグを基に、次のリリースの版が提案されます。
 
-hotfix は main 宛ての PR を任意のブランチから作れば、同じ手順で出せます。PR を開いたとき(draft なら解除したとき)に `check` が既定の版と空の原稿の区画を入れるので、Release PR と同じ状態から始まります。stg を経由しないので、マージ済み PR の一覧は付きません。
+### `stg` を通さずに出す（hotfix）
 
-## 誰がいつ書くか
+`main` から修正用のブランチを切り、`main` 宛ての PR を開きます。通常のリリースと同じようにタイトルで版を指定し、本文にリリースノートを書いてマージします。変更一覧は付きません。リリース後は `main` から `stg` に PR を出してマージし、修正を `stg` にも取り込みます。
 
-bot が人の持ち分(title と原稿の区画)に書くのは、PR が Release の候補になったときの1回だけです。その後の編集は人のもので、bot は検証してエラーを出すだけです。
+## 導入
 
-| いつ | title | 原稿の区画 | 一覧の区画 |
-| --- | --- | --- | --- |
-| `release-pr` が Release PR を作るとき | 既定値「最新のリリース + patch」を入れる | 空の区画を入れる | 書く |
-| PR が開いたとき、draft を解除したとき(`check`) | 版が書かれていなければ既定値を入れる | なければ空の区画を足す | 触らない |
-| その後の編集、push(`check`) | 検証だけ | 検証だけ | 触らない |
-| stg への push(`release-pr`) | 触らない | 触らない | 書き直す |
-| merge(`resolve`) | 検証だけ | 検証だけ | 触らない |
+以下は、本番ブランチが `main`、ステージングブランチが `stg` のリポジトリ向けの例です。
 
-`v1.3` のように版を書こうとした跡がある title には、既定値を入れません。minor を上げるつもりの書き間違いを、patch で上書きしないためです。`check` がエラーで直す先を示します。
+### 1. リポジトリを設定する
 
-hotfix が開いている Release PR と同じ版で出た場合、Release PR の title は書き換えません。次に Release PR が編集されたときか stg に push されたときに、`check` が次の patch を添えてエラーを出します。それより前に merge されても、`resolve` が止めます。
+- **Settings → Actions → General → Workflow permissions** で **Allow GitHub Actions to create and approve pull requests** を有効にします。
+- `main` への変更は PR 経由にします。`stg` の履歴を取り込めるよう、`main` 宛ての PR でマージコミットを使える設定にします。
 
-## description の区画
+### 2. workflow を配置する
 
-Release PR の description は、HTML コメントのマーカーで2つの区画に分けます。区画は互いに独立しています。
+以下の3ファイルを `.github/workflows/` に置きます。
+
+#### `stg` が進んだら Release PR を更新する
+
+`release-pr` は、`stg` に `main` に入っていないコミットがあるときに Release PR を開きます。開いている PR があれば、同じ PR の変更一覧を更新します。
+
+```yaml
+# .github/workflows/release-pr.yml
+name: Release PR
+on:
+  push:
+    branches: [stg]
+permissions:
+  contents: write # the release notes API requires it
+  pull-requests: write
+concurrency:
+  group: release-pr
+  cancel-in-progress: true
+jobs:
+  release-pr:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: 9wick/release-flow/release-pr@v1
+```
+
+#### `main` 宛ての PR を検証する
+
+`check` は、PR のタイトルにある版と、本文のリリースノートを検証します。この例では、ドラフトを解除してからチェックを実行します。
+
+```yaml
+# .github/workflows/release-check.yml
+name: Release check
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize, ready_for_review]
+    branches: [main]
+permissions:
+  contents: read
+  pull-requests: write # to fill in the defaults when a PR opens or leaves draft
+concurrency:
+  group: release-check-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  check:
+    name: Release version and notes
+    # People are still writing while the PR is a draft
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: 9wick/release-flow/check@v1
+```
+
+#### 既存のデプロイにつなぐ
+
+`resolve` は、デプロイ先の環境・版・コミットを workflow に渡します。この例は `main`、`stg`、`develop` への push で実行し、本番デプロイの成功後に GitHub Release とタグを作ります。対象ブランチと `./scripts/deploy.sh` は、自分のリポジトリに合わせてください。環境ごとに workflow を分けている場合も、それぞれから `resolve` を呼べます。
+
+```yaml
+# .github/workflows/deploy.yml
+name: Deploy
+on:
+  push:
+    branches: [main, stg, develop]
+permissions:
+  contents: write # to record the prod release
+  pull-requests: read # to find the release PR behind a push to main
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - id: release
+        uses: 9wick/release-flow/resolve@v1
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ steps.release.outputs.sha }}
+          persist-credentials: false
+
+      - name: Deploy
+        env:
+          ENVIRONMENT: ${{ steps.release.outputs.environment }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: ./scripts/deploy.sh "$ENVIRONMENT" "$VERSION"
+
+      # The tag is the record of what prod runs, and the next release PR's version builds on it
+      - name: Record the prod release
+        if: ${{ steps.release.outputs.environment == 'prod' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ steps.release.outputs.tag }}
+          SHA: ${{ steps.release.outputs.sha }}
+          NOTES: ${{ steps.release.outputs.notes }}
+        run: gh release view "$TAG" > /dev/null 2>&1 || gh release create "$TAG" --target "$SHA" --title "$TAG" --notes "$NOTES"
+```
+
+### 3. 初回のリリースを確認する
+
+すでに本番を運用している場合は、現在本番で動いているコミットに、現在の版のタグ（例 `v1.2.3`）があることを確認します。タグがなければそのコミットに付けます。リリースのタグが一つもない場合、最初の版の初期値は `0.0.1` です。
+
+[リリースの流れ](#リリースの流れ)に沿って、`stg` へのマージで Release PR が開き、本番デプロイの成功後にタグとリリースノート付きの GitHub Release が作られることを確認します。初回の `Release version and notes` が成功したら、`main` の必須チェックに追加します。[GitHub の必須ステータスチェック](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks)
+
+## 設定とトラブルシューティング
+
+### Release PR のタイトルと本文
+
+タイトルは `1.2.3` のように `major.minor.patch` で書きます。指定する版は、最新のリリースより新しく、対応するタグが存在しない版です。版は PR から取得するため、リリース用の版更新コミットを作らずに運用できます。
+
+本文では、`notes` のコメントに挟まれた部分にリリースノートを書きます。`changes` の部分には `release-pr` が変更一覧を書き、`stg` が進むたびに更新します。
 
 ```markdown
 <!-- release-flow:notes -->
-利用者向けの変更内容。この区画の中だけが Release の原稿になる。
+同期の完了までにかかる時間を短縮しました。
 <!-- /release-flow:notes -->
 
 <!-- release-flow:changes -->
-bot が書く PR 一覧。bot はこの区画の中だけを書き換える。
+* Faster sync by @someone in #12
 <!-- /release-flow:changes -->
 ```
 
-区画の外に書いたもの(PR テンプレート、レビュー向けのメモ、他の bot の要約など)は、原稿にも一覧にも入りません。原稿の区画の中の HTML コメントも原稿から除きます。
+GitHub Release に使うのは `notes` 内の文章です。欄内の HTML コメント、変更一覧、欄外のメモは含まれません。
 
-- 一覧の区画が消されていたら、bot は末尾に作り直します。消された古い一覧は区画の外に残るだけなので、原稿には入りません。
+`release-pr` は PR の作成時にタイトルの初期値と空の `notes` 欄を入れます。`check` も PR を開いたときかドラフトを解除したときに、不足している初期値を補います。版らしいタイトル（例 `v1.3`）は保持され、形式の誤りがチェックで報告されます。その後の編集では、タイトルとリリースノートを検証します。
 
-## アクション
+### 版の決まり方
 
-すべてのアクションが次の入力を受け取ります。
-
-| 入力 | 既定値 | 意味 |
+| 種類 | 例 | 決まり方 |
 | --- | --- | --- |
-| `token` | `github.token` | GitHub API のトークン |
-| `production-branch` | `main` | prod に対応するブランチ |
-| `staging-branch` | `stg` | stg に対応するブランチ |
-| `tag-prefix` | `v` | リリースのタグの接頭辞。タグ `v1.2.3` が版 `1.2.3` のリリース済みの記録になる |
+| リリースの版 | `1.3.0` | マージした PR のタイトル |
+| 最新のリリース | `1.2.3` | `v<major>.<minor>.<patch>` の形のタグのうち、SemVer で最も大きいもの |
+| `stg` と開発ブランチの版 | `1.2.4-stg.20261123050607` | 次の patch 版に、環境名と UTC の日時を付けたもの |
 
-### `release-pr`
+`stg` と開発ブランチの版は、SemVer の順序で最新のリリースより新しく、次のリリースより古くなります。これらはタグにしません。`v1.2.4-stg.…` のようなタグがあっても、リリースとしては数えません。
 
-staging-branch に main にないコミットがあれば、staging→production の PR を1件開いておき、description の一覧の区画を更新します。書き換えるのは一覧の区画の中だけで、原稿の区画には触れません。title と原稿の区画は、PR を作るときに既定値を入れるだけで、その後は書き換えません。
+### アクションの入出力と権限
 
-| 入力 | 既定値 | 意味 |
+#### 共通の入力
+
+| 入力 | 既定値 | 説明 |
 | --- | --- | --- |
-| `draft` | `true` | 新しい PR を draft で作る。Free プランの private リポジトリは draft を使えないので `false` にする |
+| `token` | `${{ github.token }}` | GitHub API のトークン |
+| `production-branch` | `main` | 本番ブランチの名前 |
+| `staging-branch` | `stg` | ステージングブランチの名前 |
+| `tag-prefix` | `v` | リリースのタグの接頭辞 |
 
-出力は `pull-request-number`、`pull-request-url`、`created` です。staging に新しいものがなければ PR を作らず、番号と URL は空になります。
+ブランチ名を変える場合は、3つのアクションの `with` と workflow のトリガーに同じブランチ名を設定します。タグの接頭辞を変える場合は、3つとも同じ `tag-prefix` を指定します。
 
-### `check`
+#### `release-pr`
 
-main 宛ての PR が開いたときと draft を解除したときは、先に既定値を入れます(「誰がいつ書くか」の表)。そのため `pull-requests: write` の権限が要ります。そのうえで、次の3つを確かめます。
+権限は `contents: write` と `pull-requests: write` です。`contents: write` は GitHub のリリースノート生成 API が要求します。
 
-- title が `1.2.3` の形の版番号であること。`v` や `-rc.1` のような接尾辞は付けない。
-- その版のタグがまだなく、最新のリリースより新しいこと。
-- description の原稿の区画に文章があること。
+| 入力 | 既定値 | 説明 |
+| --- | --- | --- |
+| `draft` | `true` | PR をドラフトで作る |
 
-出力は `version` と `tag` です。
+| 出力 | 説明 |
+| --- | --- |
+| `pull-request-number` | Release PR の番号。ステージングに新しいコミットがなければ空 |
+| `pull-request-url` | Release PR の URL。ステージングに新しいコミットがなければ空 |
+| `created` | この実行で PR を作ったときは `true` |
 
-### `resolve`
+#### `check`
 
-イベントから、デプロイ先と出すものを決めます。
+検証に失敗すると、エラーに次に使える版が表示されます。
 
-| 状況 | `environment` | `version` | `sha` |
+権限は `contents: read` と `pull-requests: write` です。`pull-requests: write` は既定値を入れるときに要ります。
+
+| 出力 | 説明 |
+| --- | --- |
+| `version` | タイトルの版。例 `1.3.0` |
+| `tag` | リリースで付けるタグ。例 `v1.3.0` |
+
+#### `resolve`
+
+`push` では push 先、マージされた `pull_request` ではベースブランチ、マージ前の `pull_request` では PR の head ブランチから環境を決めます。
+
+| きっかけ | `environment` | `version` | `sha` |
 | --- | --- | --- | --- |
-| main への push、または main への PR のマージ | `prod` | Release PR の title | マージコミット |
-| stg への push、または stg への PR のマージ | `stg` | `1.2.4-stg.20261123050607` | そのコミット |
-| それ以外のブランチ | `dev` | `1.2.4-dev.20261123050607` | そのコミット |
+| 本番ブランチへの push、本番ブランチ宛ての PR のマージ | `prod` | マージした PR のタイトル | マージ結果のコミット |
+| ステージングブランチへの push、ステージングブランチ宛ての PR のマージ | `stg` | `1.2.4-stg.<UTC の日時>` | そのコミット |
+| ほかのブランチ | `dev` | `1.2.4-dev.<UTC の日時>` | そのコミット |
 
-stg と dev の版は「最新のリリース + patch」に UTC の日時を付けたものです。SemVer の順序では最新のリリースより新しく、次のリリースより古くなります。
+`prod` のときは、`check` と同じ検証をもう一度行います。同じ版のタグが同じコミットにあるときは、やり直しとして通します。本番ブランチへの push に対応するマージ済み PR が見つからないときは失敗します。
 
-prod のとき、`notes` に Release PR の原稿の区画の中身を、`pull-request-number` にその PR の番号を返します。マージ時点でも `check` と同じ検証をします。Release PR を開いている間に hotfix が同じ版で出た場合は、ここで止まります。その版のタグが同じコミットにすでにあるときは、失敗したデプロイの再実行とみなして通します。
+権限は `contents: read` と `pull-requests: read` です。`pull-requests: read` は、push に対応するマージ済み PR の検索に使います。
 
-PR を通らずに main へ push されたコミットには版がないので、失敗します。
+| 出力 | 説明 |
+| --- | --- |
+| `environment` | `prod`、`stg`、`dev` のどれか |
+| `version` | 出す版 |
+| `tag` | `tag-prefix` を付けた版。`prod` では、デプロイが成功したらこのタグを作る |
+| `notes` | `prod` ではリリースノート欄の中身。ほかでは空 |
+| `sha` | デプロイするコミット |
+| `pull-request-number` | `prod` ではマージした PR の番号。ほかでは空 |
 
-## 使い方
+### トラブルシューティング
 
-[`examples/`](examples/) に3つの workflow があります。
+#### Release PR が作られない
 
-- [`release-pr.yml`](examples/release-pr.yml) は stg への push で Release PR を更新します。
-- [`release-check.yml`](examples/release-check.yml) は main 宛ての PR を検証します。
-- [`deploy.yml`](examples/deploy.yml) は `resolve` の結果でデプロイし、prod なら GitHub Release を作ります。
+次の2つを確かめてください。
 
-リポジトリの設定で次を有効にしてください。
+- workflow の `permissions` に `contents: write` と `pull-requests: write` があること
+- リポジトリの **Settings → Actions → General → Workflow permissions** で **Allow GitHub Actions to create and approve pull requests** が有効なこと
 
-- Settings → Actions → General の **Allow GitHub Actions to create and approve pull requests**。
-- main への直接 push を禁止し、`Release version and notes` を必須のチェックにするブランチ保護。
+ドラフト PR を使えないリポジトリでは、`release-pr` に `draft: false` を渡してください。
 
-`GITHUB_TOKEN` で作った PR では、他の workflow(CI など)が自動では動きません。PR 画面で承認して動かすか、GitHub App のトークンを `token` に渡してください。
+#### Release PR で CI が動かない
 
-## 開発
+`GITHUB_TOKEN` で PR を作成すると、`opened` をきっかけにした workflow は承認待ちになります。PR 画面で **Approve workflows to run** を選ぶと実行できます。承認待ちを避ける場合は、`release-pr` の `token` に GitHub App のトークンを渡します。[GitHub のトークンと workflow の起動条件](https://docs.github.com/en/actions/concepts/security/github_token)
 
-依存のない TypeScript を Node 24 の型除去でそのまま動かします。ビルドの工程はありません。
+上の導入例の `check` は、人がドラフトを解除したときにも実行されます。
 
-```sh
-pnpm install
-pnpm typecheck
-pnpm test
-```
+#### `PR title must be a release version such as 1.2.4`
+
+タイトルが版の形ではありません。エラーに示された版か、それより新しい版を `1.2.3` の形で書いてください。
+
+#### `PR description must contain the release notes`
+
+リリースノート欄が空です。本文の `<!-- release-flow:notes -->` と `<!-- /release-flow:notes -->` の間に書いてください。
+
+#### `1.2.4 is already released at <sha>`
+
+その版はほかのコミットでリリース済みです。Release PR を開いている間に、hotfix が同じ版で出た場合に起きることがあります。
+
+- マージの前なら、タイトルをエラーに示された版に書き換えてください。
+- マージの後にデプロイで止まったなら、マージ済みの PR のタイトルを書き換えてから、デプロイの workflow をやり直してください。
+
+マージの後に タイトルを書き換える方法は、デプロイを `push` で動かしているときだけ効きます。`pull_request` の `closed` で動かしている場合、やり直しでも元のイベントのタイトルが使われます。
+
+#### 本番デプロイに失敗した
+
+Deploy workflow の **Re-run failed jobs** で失敗したジョブを再実行します。同じ版のタグが同じコミットに作られていれば、`resolve` は再実行として扱います。
+
+#### `<sha> on main did not come from a merged PR`
+
+PR を通らずに `main` へ push されたコミットです。版がないのでデプロイできません。`main` への直接の push を禁止してください。
+
+#### fork からの PR で `check` が失敗する
+
+fork からの PR では `GITHUB_TOKEN` が読み取り専用になるため、PR が開いたときに既定値を入れられません。タイトルとリリースノート欄を手動で書き、PR を編集して検証を再実行します。
+
+[このリポジトリの開発手順](CONTRIBUTING.md)
