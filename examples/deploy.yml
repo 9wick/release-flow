@@ -1,8 +1,10 @@
 name: Deploy
 on:
+  push:
+    branches: [stg]
   pull_request:
     types: [closed]
-    branches: [main, stg]
+    branches: [main]
 permissions:
   contents: write # to record the prod release
 concurrency:
@@ -10,7 +12,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   deploy:
-    if: ${{ github.event.pull_request.merged == true }}
+    if: ${{ github.event_name == 'push' || github.event.pull_request.merged == true }}
     runs-on: ubuntu-latest
     steps:
       - id: release

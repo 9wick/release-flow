@@ -24,7 +24,7 @@ release-flow は、`stg` に入った変更を Release PR で確認し、`main` 
 ### 1. リポジトリを設定する
 
 - **Settings → Actions → General → Workflow permissions** で **Allow GitHub Actions to create and approve pull requests** を有効にします。
-- `stg` と `main` への変更は PR 経由にします。`stg` の履歴を取り込めるよう、`main` 宛ての PR でマージコミットを使える設定にします。
+- `main` への変更は PR 経由にします。`stg` の履歴を取り込めるよう、`main` 宛ての PR でマージコミットを使える設定にします。
 
 ### 2. workflow を配置する
 
@@ -84,7 +84,9 @@ jobs:
 
 #### 既存のデプロイにつなぐ
 
-`resolve` は、デプロイ先の環境・版・コミットを workflow に渡します。この例では `stg` と `main` 宛ての PR をマージしたときに、マージ結果のコミットをデプロイします。本番デプロイの成功後に GitHub Release とタグを作ります。`./scripts/deploy.sh` は、自分のリポジトリのデプロイ手順に置き換えてください。
+`resolve` は、デプロイ先の環境・版・コミットを workflow に渡します。この例では `stg` への `push` でステージングにデプロイします。`main` 宛ての PR をマージすると、マージ結果のコミットを本番にデプロイし、成功後に GitHub Release とタグを作ります。`./scripts/deploy.sh` は、自分のリポジトリのデプロイ手順に置き換えてください。
+
+`stg` のデプロイにビルドキャッシュを設定すると、`stg` への push で動く実行間で共有できます。[GitHub Actions のキャッシュのスコープ](https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching#restrictions-for-accessing-a-cache)
 
 開発環境へのデプロイが必要なら、`push` や `workflow_dispatch` で起動する workflow から `resolve` を呼べます。
 
@@ -92,9 +94,11 @@ jobs:
 # .github/workflows/deploy.yml
 name: Deploy
 on:
+  push:
+    branches: [stg]
   pull_request:
     types: [closed]
-    branches: [main, stg]
+    branches: [main]
 permissions:
   contents: write # to record the prod release
 concurrency:
@@ -102,7 +106,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   deploy:
-    if: ${{ github.event.pull_request.merged == true }}
+    if: ${{ github.event_name == 'push' || github.event.pull_request.merged == true }}
     runs-on: ubuntu-latest
     steps:
       - id: release
