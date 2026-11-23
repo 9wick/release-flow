@@ -21,7 +21,7 @@ outputs:
   tag:
     description: <tag-prefix><version>. Create it after a successful prod deploy so the next version builds on it.
   notes:
-    description: The release PR description on prod without the bot's list of merged PRs, empty otherwise.
+    description: The notes section of the release PR description on prod, empty otherwise.
   sha:
     description: Commit to deploy. The merge commit for a merged PR.
   pull-request-number:

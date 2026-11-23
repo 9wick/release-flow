@@ -80,7 +80,7 @@ test("release-pr opens a draft titled with the next patch and lists the shipped 
       "GET compare/main...stg": () => [200, { ahead_by: 2 }],
       "GET git/matching-refs/tags/v": tags("v1.2.3", "v1.2.4-stg.1"),
       "GET pulls": () => [200, []],
-      "POST pulls": (req) => [201, pr({ title: req.title, body: req.body })],
+      "POST pulls": (req) => ((body = req.body), [201, pr({ title: req.title, body })]),
       "POST releases/generate-notes": () => [200, { body: "* Faster sync by @a in #5" }],
       "GET pulls/7": () => [200, pr({ body })],
       "PATCH pulls/7": (req) => ((body = req.body), [200, pr({ body })]),
@@ -95,12 +95,14 @@ test("release-pr opens a draft titled with the next patch and lists the shipped 
   );
   const notes = result.calls.find((call) => call.route === "POST releases/generate-notes")!.body;
   assert.deepEqual(notes, { tag_name: "v1.2.4", target_commitish: "stg", previous_tag_name: "v1.2.3" });
-  assert.match(body, /\* Faster sync by @a in #5/);
+  assert.match(created.body, /^<!-- release-flow:notes -->/);
+  assert.equal(body, `${created.body}\n<!-- release-flow:changes -->\n* Faster sync by @a in #5\n<!-- /release-flow:changes -->\n`);
   assert.deepEqual(result.outputs, { "pull-request-number": "7", "pull-request-url": "https://x/pull/7", created: "true" });
 });
 
 test("release-pr keeps the existing PR's title and the description people wrote", async () => {
-  let body = "Faster sync.\n\n<!-- release-flow:changes -->\nold\n<!-- /release-flow:changes -->\n";
+  let body =
+    "<!-- release-flow:notes -->\nFaster sync.\n<!-- /release-flow:notes -->\n\n<!-- release-flow:changes -->\nold\n<!-- /release-flow:changes -->\n";
   const result = await runAction(
     "release-pr",
     {
@@ -115,7 +117,10 @@ test("release-pr keeps the existing PR's title and the description people wrote"
   );
   assert.ok(result.ok, result.stdout);
   assert.equal(result.calls.find((call) => call.route === "POST releases/generate-notes")!.body.tag_name, "v1.3.0");
-  assert.equal(body, "Faster sync.\n\n<!-- release-flow:changes -->\nnew\n<!-- /release-flow:changes -->\n");
+  assert.equal(
+    body,
+    "<!-- release-flow:notes -->\nFaster sync.\n<!-- /release-flow:notes -->\n\n<!-- release-flow:changes -->\nnew\n<!-- /release-flow:changes -->\n",
+  );
   assert.equal(result.outputs.created, "false");
 });
 
@@ -134,7 +139,7 @@ test("check rejects a hotfix PR whose version is already released", async () => 
     },
     {
       eventName: "pull_request",
-      event: { pull_request: { number: 9, title: "1.2.3", body: "Fix crash", base: { ref: "main" }, head: { ref: "hotfix/crash", sha: "h1" }, merge_commit_sha: null } },
+      event: { pull_request: { number: 9, title: "1.2.3", body: "<!-- release-flow:notes -->\nFix crash\n<!-- /release-flow:notes -->", base: { ref: "main" }, head: { ref: "hotfix/crash", sha: "h1" }, merge_commit_sha: null } },
       ref: "9/merge",
       sha: "m1",
     },
@@ -153,7 +158,7 @@ test("resolve on a push to main takes the version and notes from the merged PR",
         [
           pr({
             title: "1.3.0",
-            body: "Faster sync.\n\n<!-- release-flow:changes -->\n* Sync by @a in #5\n<!-- /release-flow:changes -->\n",
+            body: "Reviewer memo.\n\n<!-- release-flow:notes -->\nFaster sync.\n<!-- /release-flow:notes -->\n\n<!-- release-flow:changes -->\n* Sync by @a in #5\n<!-- /release-flow:changes -->\n",
             merged_at: "2026-11-23T00:00:00Z",
           }),
         ],
@@ -182,7 +187,7 @@ test("resolve on a merged PR event uses the merge commit", async () => {
     },
     {
       eventName: "pull_request",
-      event: { pull_request: { number: 7, title: "1.3.0", body: "Faster sync.", merged: true, merge_commit_sha: "m1", base: { ref: "main" }, head: { ref: "stg", sha: "s1" } } },
+      event: { pull_request: { number: 7, title: "1.3.0", body: "<!-- release-flow:notes -->\nFaster sync.\n<!-- /release-flow:notes -->", merged: true, merge_commit_sha: "m1", base: { ref: "main" }, head: { ref: "stg", sha: "s1" } } },
       ref: "7/merge",
       sha: "x",
     },

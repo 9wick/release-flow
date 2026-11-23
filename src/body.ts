@@ -1,12 +1,23 @@
-// The bot owns only the text between these markers; everything else in the PR body is the human's.
-const start = "<!-- release-flow:changes -->";
-const end = "<!-- /release-flow:changes -->";
-const block = new RegExp(`\\n*${start}[\\s\\S]*?${end}\\n*`);
+// A release PR body holds two marked sections. People write `notes`; the bot rewrites only `changes`.
+// Anything outside them (PR templates, reviewer memos, other bots) never reaches the release.
+export type Section = "notes" | "changes";
 
-export const withChanges = (body: string, changes: string): string => {
-  const section = `${start}\n${changes.trim()}\n${end}`;
-  const authored = authoredNotes(body);
-  return authored === "" ? `${section}\n` : `${authored}\n\n${section}\n`;
+const start = (section: Section) => `<!-- release-flow:${section} -->`;
+const end = (section: Section) => `<!-- /release-flow:${section} -->`;
+const pattern = (section: Section) => new RegExp(`${start(section)}\\n?([\\s\\S]*?)\\n?${end(section)}`);
+
+export const readSection = (body: string, section: Section): string | undefined =>
+  pattern(section).exec(body)?.[1];
+
+export const writeSection = (body: string, section: Section, content: string): string => {
+  const block = `${start(section)}\n${content.trim()}\n${end(section)}`;
+  if (pattern(section).test(body)) return body.replace(pattern(section), () => block);
+  const rest = body.trimEnd();
+  return rest === "" ? `${block}\n` : `${rest}\n\n${block}\n`;
 };
 
-export const authoredNotes = (body: string): string => body.replace(block, "\n").trim();
+export const notesTemplate = writeSection("", "notes", "<!-- Write the release notes for users here. -->");
+
+// HTML comments are the template's guidance, not part of the notes.
+export const releaseNotes = (body: string): string =>
+  (readSection(body, "notes") ?? "").replace(/<!--[\s\S]*?-->/g, "").trim();

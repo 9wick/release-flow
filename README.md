@@ -11,12 +11,32 @@ main・stg・開発ブランチの3段構成で、PR を承認の場にしてリ
 1. 開発ブランチの PR を stg にマージします。stg へデプロイされます。
 2. stg が更新されるたびに、`release-pr` が stg→main の Release PR を1件だけ開いておきます。
    - 初回は draft で作り、title に「最新のリリース + patch」を仮に入れます。
-   - description には、前回のリリースから stg にマージされた PR の一覧を bot が書きます。
-3. 人が title を版番号に、description の一覧より上を利用者向けの原稿に書き換え、draft を解除します。`check` が版と原稿を検証します。
+   - description には、原稿の区画と PR 一覧の区画を置きます。一覧の区画には、前回のリリースから stg にマージされた PR を bot が書きます。
+3. 人が title を版番号にし、原稿の区画に利用者向けの変更内容を書いて、draft を解除します。`check` が版と原稿を検証します。
 4. Release PR をマージすると main へデプロイされます。`resolve` が PR の title と description から版と原稿を返します。
 5. デプロイが成功したら、タグ `v<版>` を作ります(GitHub Release を作ればタグもできます)。次の Release PR の版はこのタグから決まります。
 
-hotfix は main 宛ての PR を任意のブランチから作れば、同じ手順で出せます。title と description の決まりも、`check` の検証も同じです。stg を経由しないので、マージ済み PR の一覧は付きません。
+hotfix は main 宛ての PR を任意のブランチから作れば、同じ手順で出せます。title と description の決まりも、`check` の検証も同じです。stg を経由しないので、マージ済み PR の一覧は付きません。原稿の区画は自分で書きます。
+
+## description の区画
+
+Release PR の description は、HTML コメントのマーカーで2つの区画に分けます。区画は互いに独立しています。
+
+```markdown
+<!-- release-flow:notes -->
+利用者向けの変更内容。この区画の中だけが Release の原稿になる。
+<!-- /release-flow:notes -->
+
+<!-- release-flow:changes -->
+bot が書く PR 一覧。bot はこの区画の中だけを書き換える。
+<!-- /release-flow:changes -->
+```
+
+区画の外に書いたもの(PR テンプレート、レビュー向けのメモ、他の bot の要約など)は、原稿にも一覧にも入りません。原稿の区画の中の HTML コメントも原稿から除きます。
+
+- `release-pr` が新しく作る PR には、原稿の区画が空のテンプレートとして入っています。
+- hotfix の PR は人が作るので、上の原稿の区画を自分で書きます。`.github/pull_request_template.md` に置いておくと楽です。
+- 一覧の区画が消されていたら、bot は末尾に作り直します。消された古い一覧は区画の外に残るだけなので、原稿には入りません。
 
 ## アクション
 
@@ -31,7 +51,7 @@ hotfix は main 宛ての PR を任意のブランチから作れば、同じ手
 
 ### `release-pr`
 
-staging-branch に main にないコミットがあれば、staging→production の PR を1件開いておき、description 内の一覧を更新します。一覧はマーカーの HTML コメントで囲んだ範囲だけを書き換え、人が書いた部分には触れません。title も書き換えません。
+staging-branch に main にないコミットがあれば、staging→production の PR を1件開いておき、description の一覧の区画を更新します。書き換えるのは一覧の区画の中だけで、原稿の区画と title には触れません。
 
 | 入力 | 既定値 | 意味 |
 | --- | --- | --- |
@@ -45,7 +65,7 @@ main 宛ての PR で、次の3つを確かめます。
 
 - title が `1.2.3` の形の版番号であること。`v` や `-rc.1` のような接尾辞は付けない。
 - その版のタグがまだなく、最新のリリースより新しいこと。
-- description に、bot の一覧以外の文章があること。
+- description の原稿の区画に文章があること。
 
 出力は `version` と `tag` です。
 
@@ -61,7 +81,7 @@ main 宛ての PR で、次の3つを確かめます。
 
 stg と dev の版は「最新のリリース + patch」に UTC の日時を付けたものです。SemVer の順序では最新のリリースより新しく、次のリリースより古くなります。
 
-prod のとき、`notes` に Release PR の description のうち人が書いた部分(bot の PR 一覧を除いたもの)を、`pull-request-number` にその PR の番号を返します。マージ時点でも `check` と同じ検証をします。Release PR を開いている間に hotfix が同じ版で出た場合は、ここで止まります。その版のタグが同じコミットにすでにあるときは、失敗したデプロイの再実行とみなして通します。
+prod のとき、`notes` に Release PR の原稿の区画の中身を、`pull-request-number` にその PR の番号を返します。マージ時点でも `check` と同じ検証をします。Release PR を開いている間に hotfix が同じ版で出た場合は、ここで止まります。その版のタグが同じコミットにすでにあるときは、失敗したデプロイの再実行とみなして通します。
 
 PR を通らずに main へ push されたコミットには版がないので、失敗します。
 

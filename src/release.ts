@@ -1,4 +1,4 @@
-import { authoredNotes } from "./body.ts";
+import { releaseNotes } from "./body.ts";
 import type { GitHub } from "./github.ts";
 import { compareVersions, formatVersion, latestVersion, parseVersion, type Version } from "./version.ts";
 
@@ -30,8 +30,10 @@ export const checkRelease = (
   } else if (latest && compareVersions(version, latest) <= 0) {
     problems.push(`${formatVersion(version)} must be newer than the latest release ${formatVersion(latest)}.`);
   }
-  if (authoredNotes(request.body) === "") {
-    problems.push("PR description must contain the release notes.");
+  if (releaseNotes(request.body) === "") {
+    problems.push(
+      "PR description must contain the release notes between <!-- release-flow:notes --> and <!-- /release-flow:notes -->.",
+    );
   }
   return version && problems.length === 0 ? { ok: true, version } : { ok: false, problems };
 };

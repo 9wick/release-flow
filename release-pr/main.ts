@@ -1,4 +1,4 @@
-import { withChanges } from "../src/body.ts";
+import { notesTemplate, writeSection } from "../src/body.ts";
 import { context, input, run, setOutputs } from "../src/runtime.ts";
 import { formatVersion, latestVersion, nextPatch, parseVersion } from "../src/version.ts";
 
@@ -20,7 +20,7 @@ run(async () => {
       base: production,
       head: staging,
       title: formatVersion(nextPatch(latest)),
-      body: "",
+      body: notesTemplate,
       draft: input("draft") === "true",
     }));
 
@@ -31,7 +31,7 @@ run(async () => {
   });
   // Re-read right before writing so an edit made while notes were generated is kept.
   const { body } = await github.getPullRequest(pr.number);
-  const updated = withChanges(body, changes);
+  const updated = writeSection(body, "changes", changes);
   if (updated !== body) await github.updatePullRequestBody(pr.number, updated);
 
   setOutputs({

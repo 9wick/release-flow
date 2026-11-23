@@ -1,5 +1,5 @@
 name: Release check
-description: Check that a PR into the production branch names a new version in its title and has release notes in its description.
+description: Check that a PR into the production branch names a new version in its title and has release notes in the notes section of its description.
 inputs:
   token:
     description: Token for the GitHub API. PRs created with the default GITHUB_TOKEN do not trigger other workflows; pass a GitHub App token to run CI on them.
