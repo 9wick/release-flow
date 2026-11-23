@@ -1,4 +1,5 @@
 export type PullRequestEvent = {
+  readonly action: string;
   readonly number: number;
   readonly title: string;
   readonly body: string;
@@ -9,6 +10,7 @@ export type PullRequestEvent = {
 };
 
 type RawPullRequestEvent = {
+  action?: string;
   pull_request?: {
     number: number;
     title: string;
@@ -21,9 +23,10 @@ type RawPullRequestEvent = {
 };
 
 export const pullRequestOf = (event: unknown): PullRequestEvent | undefined => {
-  const pr = (event as RawPullRequestEvent).pull_request;
+  const { action, pull_request: pr } = event as RawPullRequestEvent;
   if (!pr) return undefined;
   return {
+    action: action ?? "",
     number: pr.number,
     title: pr.title,
     body: pr.body ?? "",

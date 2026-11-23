@@ -5,7 +5,7 @@ on:
     branches: [main]
 permissions:
   contents: read
-  pull-requests: write # to add the notes section to PRs opened by hand
+  pull-requests: write # to fill in the defaults when a PR opens or leaves draft
 concurrency:
   group: release-check-${{ github.event.pull_request.number }}
   cancel-in-progress: true

@@ -16,9 +16,23 @@ main・stg・開発ブランチの3段構成で、PR を承認の場にしてリ
 4. Release PR をマージすると main へデプロイされます。`resolve` が PR の title と description から版と原稿を返します。
 5. デプロイが成功したら、タグ `v<版>` を作ります(GitHub Release を作ればタグもできます)。次の Release PR の版はこのタグから決まります。
 
-hotfix は main 宛ての PR を任意のブランチから作れば、同じ手順で出せます。title と description の決まりも、`check` の検証も同じです。stg を経由しないので、マージ済み PR の一覧は付きません。原稿の区画は、最初の `check` が空のまま足します。
+hotfix は main 宛ての PR を任意のブランチから作れば、同じ手順で出せます。PR を開いたとき(draft なら解除したとき)に `check` が既定の版と空の原稿の区画を入れるので、Release PR と同じ状態から始まります。stg を経由しないので、マージ済み PR の一覧は付きません。
 
-hotfix の版は、Release PR と同じく「最新より新しいこと」だけが条件です。版の形でない title や古い版には、`check` が次の patch を添えてエラーを出します。hotfix が開いている Release PR の版を使ってしまった場合は、deploy の後に `release-pr` を呼べば、Release PR の title が新しい既定値に戻ります([`deploy.yml`](examples/deploy.yml) の最後の step)。タグを作る deploy の中で呼ぶのは、`GITHUB_TOKEN` で作ったタグでは別の workflow が起動しないからです。
+## 誰がいつ書くか
+
+bot が人の持ち分(title と原稿の区画)に書くのは、PR が Release の候補になったときの1回だけです。その後の編集は人のもので、bot は検証してエラーを出すだけです。
+
+| いつ | title | 原稿の区画 | 一覧の区画 |
+| --- | --- | --- | --- |
+| `release-pr` が Release PR を作るとき | 既定値「最新のリリース + patch」を入れる | 空の区画を入れる | 書く |
+| PR が開いたとき、draft を解除したとき(`check`) | 版が書かれていなければ既定値を入れる | なければ空の区画を足す | 触らない |
+| その後の編集、push(`check`) | 検証だけ | 検証だけ | 触らない |
+| stg への push(`release-pr`) | 触らない | 触らない | 書き直す |
+| merge(`resolve`) | 検証だけ | 検証だけ | 触らない |
+
+`v1.3` のように版を書こうとした跡がある title には、既定値を入れません。minor を上げるつもりの書き間違いを、patch で上書きしないためです。`check` がエラーで直す先を示します。
+
+hotfix が開いている Release PR と同じ版で出た場合、Release PR の title は書き換えません。次に Release PR が編集されたときか stg に push されたときに、`check` が次の patch を添えてエラーを出します。それより前に merge されても、`resolve` が止めます。
 
 ## description の区画
 
@@ -36,8 +50,6 @@ bot が書く PR 一覧。bot はこの区画の中だけを書き換える。
 
 区画の外に書いたもの(PR テンプレート、レビュー向けのメモ、他の bot の要約など)は、原稿にも一覧にも入りません。原稿の区画の中の HTML コメントも原稿から除きます。
 
-- `release-pr` が新しく作る PR には、原稿の区画が空のテンプレートとして入っています。
-- 人が作った PR(hotfix など)に原稿の区画がなければ、`check` が空の区画を末尾に足します。本文のほかの部分には触れません。
 - 一覧の区画が消されていたら、bot は末尾に作り直します。消された古い一覧は区画の外に残るだけなので、原稿には入りません。
 
 ## アクション
@@ -53,9 +65,7 @@ bot が書く PR 一覧。bot はこの区画の中だけを書き換える。
 
 ### `release-pr`
 
-staging-branch に main にないコミットがあれば、staging→production の PR を1件開いておき、description の一覧の区画を更新します。書き換えるのは一覧の区画の中だけで、原稿の区画には触れません。
-
-title は既定値の「最新のリリース + patch」として扱います。title の版がその後のリリース(hotfix など)に追いつかれて最新以下になっていたら、新しい既定値に戻します。最新より新しい版は人が選んだものとして、版の形になっていない title は書き間違いの可能性があるので、どちらも書き換えません(後者は `check` が止めます)。
+staging-branch に main にないコミットがあれば、staging→production の PR を1件開いておき、description の一覧の区画を更新します。書き換えるのは一覧の区画の中だけで、原稿の区画には触れません。title と原稿の区画は、PR を作るときに既定値を入れるだけで、その後は書き換えません。
 
 | 入力 | 既定値 | 意味 |
 | --- | --- | --- |
@@ -65,11 +75,11 @@ title は既定値の「最新のリリース + patch」として扱います。
 
 ### `check`
 
-main 宛ての PR で、次の3つを確かめます。
+main 宛ての PR が開いたときと draft を解除したときは、先に既定値を入れます(「誰がいつ書くか」の表)。そのため `pull-requests: write` の権限が要ります。そのうえで、次の3つを確かめます。
 
 - title が `1.2.3` の形の版番号であること。`v` や `-rc.1` のような接尾辞は付けない。
 - その版のタグがまだなく、最新のリリースより新しいこと。
-- description の原稿の区画に文章があること。区画がなければ空の区画を足してから失敗し、書く場所を示します。そのため `pull-requests: write` の権限が要ります。
+- description の原稿の区画に文章があること。
 
 出力は `version` と `tag` です。
 
@@ -95,7 +105,7 @@ PR を通らずに main へ push されたコミットには版がないので�
 
 - [`release-pr.yml`](examples/release-pr.yml) は stg への push で Release PR を更新します。
 - [`release-check.yml`](examples/release-check.yml) は main 宛ての PR を検証します。
-- [`deploy.yml`](examples/deploy.yml) は `resolve` の結果でデプロイし、prod なら GitHub Release を作って Release PR を更新します。
+- [`deploy.yml`](examples/deploy.yml) は `resolve` の結果でデプロイし、prod なら GitHub Release を作ります。
 
 リポジトリの設定で次を有効にしてください。
 

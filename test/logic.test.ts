@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { notesTemplate, releaseNotes, writeSection } from "../src/body.ts";
+import { releaseNotes, withNotesSection, writeSection } from "../src/body.ts";
 import { environmentOf } from "../src/environment.ts";
-import { checkRelease, proposedTitle } from "../src/release.ts";
+import { checkRelease, withDefaults } from "../src/release.ts";
 import { latestVersion, nextPatch, parseVersion, previewVersion } from "../src/version.ts";
 
 const v = (text: string) => parseVersion(text)!;
@@ -29,6 +29,8 @@ test("environment follows the branch", () => {
     ["prod", "stg", "dev", "dev"],
   );
 });
+
+const notesTemplate = withNotesSection("");
 
 const releaseBody = (notes: string, extra = "") =>
   writeSection(writeSection(`${extra}${notesTemplate}`, "notes", notes), "changes", "* Sync by @a in #5");
@@ -65,11 +67,14 @@ test("a release needs a new version and notes written by a person", () => {
   assert.equal(problemsOf("1.2.3", notes, "abc", "abc").length, 0, "re-run of the same release");
 });
 
-test("a title caught up by a later release goes back to the proposal, and people's choices stay", () => {
-  const latest = v("1.2.4");
-  assert.equal(proposedTitle("1.2.4", latest), "1.2.5", "a hotfix took the version");
-  assert.equal(proposedTitle("1.2.3", latest), "1.2.5");
-  assert.equal(proposedTitle("1.3.0", latest), "1.3.0", "a newer version is a person's choice");
-  assert.equal(proposedTitle("v1.3", latest), "v1.3", "a malformed title may mean a bigger bump");
-  assert.equal(proposedTitle("1.2.4", undefined), "1.2.4");
+test("defaults fill only what nobody has written", () => {
+  const latest = v("1.2.3");
+  const written = releaseBody("Faster sync.");
+  assert.deepEqual(withDefaults({ title: "", body: "" }, latest), { title: "1.2.4", body: notesTemplate });
+  assert.deepEqual(withDefaults({ title: "Fix crash", body: "Memo" }, latest), {
+    title: "1.2.4",
+    body: `Memo\n\n${notesTemplate}`,
+  });
+  assert.deepEqual(withDefaults({ title: "1.3.0", body: written }, latest), { title: "1.3.0", body: written });
+  assert.equal(withDefaults({ title: "v1.3", body: "" }, latest).title, "v1.3", "a typo of a bigger bump is left for check");
 });

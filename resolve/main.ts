@@ -15,8 +15,8 @@ run(async () => {
       : { branch: pr.headBranch, sha: pr.headSha }
     : { branch: ref, sha };
   const environment = environmentOf(target.branch, branches);
+  const latest = latestVersion(await github.tagsStartingWith(tagPrefix), tagPrefix);
   if (environment !== "prod") {
-    const latest = latestVersion(await github.tagsStartingWith(tagPrefix), tagPrefix);
     const version = previewVersion(latest, environment, new Date());
     setOutputs({
       environment,
@@ -36,7 +36,7 @@ run(async () => {
       problems: [`${target.sha} on ${branches.production} did not come from a merged PR, so it has no version.`],
     };
   }
-  const result = await verifyRelease(github, tagPrefix, release, target.sha);
+  const result = await verifyRelease(github, tagPrefix, release, latest, target.sha);
   if (!result.ok) return result;
 
   const version = formatVersion(result.version);
