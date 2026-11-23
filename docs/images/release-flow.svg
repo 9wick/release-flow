@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 860" width="1400" height="860" font-family="'Hiragino Sans','Noto Sans JP','Yu Gothic',system-ui,sans-serif">
+  <style>
+    .lane { fill: none; stroke-width: 7; stroke-linecap: round; }
+    .node { fill: #fff; stroke-width: 6; }
+    .lane-kind { font: 500 13px ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 1.5px; fill: #6b7280; }
+    .lane-name { font: 600 20px ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .card { fill: #fff; stroke: #e2e2e0; stroke-width: 2; }
+    .leader { stroke: #d4d4d2; stroke-width: 2; fill: none; }
+    .num { fill: #1d3c5a; }
+    .num-text { font: 700 18px system-ui, sans-serif; fill: #fff; text-anchor: middle; }
+    .actor { font: 600 13px ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 1.5px; }
+    .title { font-weight: 700; font-size: 19px; fill: #1d3c5a; }
+    .sub { font-size: 14px; fill: #4b5563; }
+    .tag { fill: #f0b93a; stroke: #a87b12; stroke-width: 3; }
+    .tag-text { font: 700 19px ui-monospace, SFMono-Regular, Menlo, monospace; fill: #a87b12; }
+  </style>
+
+  <rect x="1" y="1" width="1398" height="858" rx="28" fill="#fafaf8" stroke="#ececea" stroke-width="2"/>
+
+  <!-- lane labels -->
+  <text class="lane-kind" x="56" y="226">DEV BRANCH</text>
+  <text class="lane-name" x="56" y="252" fill="#e07a5f">feature/*</text>
+  <text class="lane-kind" x="56" y="370">STAGING BRANCH</text>
+  <text class="lane-name" x="56" y="396" fill="#3a6ea5">stg</text>
+  <text class="lane-kind" x="56" y="514">PRODUCTION BRANCH</text>
+  <text class="lane-name" x="56" y="540" fill="#0e8a74">main</text>
+  <text class="lane-kind" x="930" y="612">HOTFIX BRANCH</text>
+  <text class="lane-name" x="930" y="638" fill="#c8553d">hotfix/*</text>
+
+  <!-- leaders, drawn under the lanes -->
+  <path class="leader" d="M470 428 L330 680"/>
+  <path class="leader" d="M640 405 L600 170"/>
+  <path class="leader" d="M840 456 L880 170"/>
+  <path class="leader" d="M990 576 L700 680"/>
+  <path class="leader" d="M1160 656 L1180 740"/>
+
+  <!-- main -->
+  <path class="lane" stroke="#0e8a74" d="M60 560 H1340"/>
+  <!-- stg -->
+  <path class="lane" stroke="#3a6ea5" d="M60 416 H1340"/>
+  <!-- feature branch: stg -> feature -> stg -->
+  <path class="lane" stroke="#e07a5f" d="M220 416 C260 416 270 272 320 272 H400 C450 272 430 416 470 416"/>
+  <!-- release PR: stg -> main -->
+  <path class="lane" stroke="#8a5cc7" stroke-dasharray="2 14" d="M600 416 C760 416 840 560 1000 560"/>
+  <!-- hotfix: main -> hotfix -> main -->
+  <path class="lane" stroke="#c8553d" d="M1080 560 C1110 560 1110 640 1150 640 H1170 C1210 640 1210 560 1240 560"/>
+
+  <!-- tag stems -->
+  <path stroke="#a87b12" stroke-width="4" d="M200 560 V500 M1000 560 V500 M1240 560 V500"/>
+
+  <!-- commits -->
+  <circle class="node" stroke="#0e8a74" cx="200" cy="560" r="16"/>
+  <circle class="node" stroke="#3a6ea5" cx="220" cy="416" r="16"/>
+  <circle class="node" stroke="#e07a5f" cx="320" cy="272" r="16"/>
+  <circle class="node" stroke="#e07a5f" cx="400" cy="272" r="16"/>
+  <circle class="node" stroke="#3a6ea5" cx="470" cy="416" r="16"/>
+  <circle class="node" stroke="#3a6ea5" cx="600" cy="416" r="16"/>
+  <circle class="node" stroke="#0e8a74" cx="1000" cy="560" r="20"/>
+  <circle class="node" stroke="#c8553d" cx="1160" cy="640" r="16"/>
+  <circle class="node" stroke="#0e8a74" cx="1240" cy="560" r="20"/>
+
+  <!-- release tags -->
+  <rect class="tag" x="188" y="478" width="24" height="24" transform="rotate(45 200 490)"/>
+  <text class="tag-text" x="222" y="480">v1.2.3</text>
+  <rect class="tag" x="988" y="478" width="24" height="24" transform="rotate(45 1000 490)"/>
+  <text class="tag-text" x="1022" y="480">v1.3.0</text>
+  <rect class="tag" x="1228" y="478" width="24" height="24" transform="rotate(45 1240 490)"/>
+  <text class="tag-text" x="1262" y="480">v1.3.1</text>
+
+  <text class="lane-kind" x="752" y="456" fill="#8a5cc7" transform="rotate(27 752 456)">RELEASE PR</text>
+
+  <!-- 2: release-pr -->
+  <rect class="card" x="430" y="48" width="380" height="122" rx="22"/>
+  <circle class="num" cx="476" cy="109" r="22"/>
+  <text class="num-text" x="476" y="115">2</text>
+  <text class="actor" x="514" y="80" fill="#0e8a74">RELEASE-PR</text>
+  <text class="title" x="514" y="110">Release PR を開く・更新</text>
+  <text class="sub" x="514" y="138">stg→main。title に 1.2.4 を仮入力</text>
+  <text class="sub" x="514" y="158">本文に merge 済み PR の一覧</text>
+
+  <!-- 3: you edit, check validates -->
+  <rect class="card" x="830" y="48" width="380" height="122" rx="22"/>
+  <circle class="num" cx="876" cy="109" r="22"/>
+  <text class="num-text" x="876" y="115">3</text>
+  <text class="actor" x="914" y="80" fill="#c8553d">YOU</text>
+  <text class="actor" x="954" y="80" fill="#0e8a74">+ CHECK</text>
+  <text class="title" x="914" y="110">title を版、本文を原稿に</text>
+  <text class="sub" x="914" y="138">1.3.0 / 利用者向けの変更内容</text>
+  <text class="sub" x="914" y="158">check が版と原稿を検証</text>
+
+  <!-- 1: merge into stg -->
+  <rect class="card" x="130" y="680" width="380" height="122" rx="22"/>
+  <circle class="num" cx="176" cy="741" r="22"/>
+  <text class="num-text" x="176" y="747">1</text>
+  <text class="actor" x="214" y="712" fill="#c8553d">YOU</text>
+  <text class="title" x="214" y="742">PR を stg に merge</text>
+  <text class="sub" x="214" y="770">resolve → stg に deploy</text>
+  <text class="sub" x="214" y="790">版は 1.2.4-stg.&lt;日時&gt;</text>
+
+  <!-- 4: merge release PR -->
+  <rect class="card" x="530" y="680" width="380" height="122" rx="22"/>
+  <circle class="num" cx="576" cy="741" r="22"/>
+  <text class="num-text" x="576" y="747">4</text>
+  <text class="actor" x="614" y="712" fill="#c8553d">YOU</text>
+  <text class="actor" x="654" y="712" fill="#0e8a74">+ RESOLVE</text>
+  <text class="title" x="614" y="742">Release PR を merge</text>
+  <text class="sub" x="614" y="770">resolve → prod に deploy</text>
+  <text class="sub" x="614" y="790">成功したらタグ v1.3.0 を作る</text>
+
+  <!-- H: hotfix -->
+  <rect class="card" x="930" y="740" width="420" height="96" rx="22"/>
+  <circle class="num" cx="976" cy="788" r="22" fill="#c8553d"/>
+  <text class="num-text" x="976" y="794">H</text>
+  <text class="actor" x="1014" y="768" fill="#c8553d">YOU</text>
+  <text class="title" x="1014" y="796">hotfix を main へ PR、同じ手順</text>
+  <text class="sub" x="1014" y="822">一覧は付かない。版の衝突は止まる</text>
+</svg>

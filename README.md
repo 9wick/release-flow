@@ -6,6 +6,8 @@ main・stg・開発ブランチの3段構成で、PR を承認の場にしてリ
 
 ## 流れ
 
+![feature を stg に merge すると Release PR が開き、人が版と原稿を書いて merge すると prod に deploy されてタグが付く。hotfix は main へ直接 PR を出す](docs/images/release-flow.svg)
+
 1. 開発ブランチの PR を stg にマージします。stg へデプロイされます。
 2. stg が更新されるたびに、`release-pr` が stg→main の Release PR を1件だけ開いておきます。
    - 初回は draft で作り、title に「最新のリリース + patch」を仮に入れます。
