@@ -130,22 +130,48 @@ test("release-pr does nothing when staging has nothing new", async () => {
   assert.deepEqual(result.calls.map((call) => call.route), ["GET compare/main...stg"]);
 });
 
+const hotfixEvent = {
+  eventName: "pull_request",
+  event: { pull_request: { number: 9, title: "1.2.3", body: "", base: { ref: "main" }, head: { ref: "hotfix/crash", sha: "h1" }, merge_commit_sha: null } },
+  ref: "9/merge",
+  sha: "m1",
+};
+
 test("check rejects a hotfix PR whose version is already released", async () => {
+  const body = "<!-- release-flow:notes -->\nFix crash\n<!-- /release-flow:notes -->\n";
   const result = await runAction(
     "check",
     {
+      "GET pulls/9": () => [200, pr({ number: 9, title: "1.2.3", body })],
       "GET git/matching-refs/tags/v": tags("v1.2.3"),
       "GET commits/refs/tags/v1.2.3": () => [200, { sha: "old" }],
     },
-    {
-      eventName: "pull_request",
-      event: { pull_request: { number: 9, title: "1.2.3", body: "<!-- release-flow:notes -->\nFix crash\n<!-- /release-flow:notes -->", base: { ref: "main" }, head: { ref: "hotfix/crash", sha: "h1" }, merge_commit_sha: null } },
-      ref: "9/merge",
-      sha: "m1",
-    },
+    hotfixEvent,
   );
   assert.equal(result.ok, false);
   assert.match(result.stdout, /::error::1\.2\.3 is already released at old/);
+  assert.ok(!result.calls.some((call) => call.route === "PATCH pulls/9"), "a body with the section is left alone");
+});
+
+test("check gives a hand-made PR an empty notes section and asks for notes", async () => {
+  const written = "Crash on launch when offline.";
+  const result = await runAction(
+    "check",
+    {
+      "GET pulls/9": () => [200, pr({ number: 9, title: "1.2.4", body: written })],
+      "PATCH pulls/9": (req) => [200, pr({ number: 9, body: req.body })],
+      "GET git/matching-refs/tags/v": tags("v1.2.3"),
+      "GET commits/refs/tags/v1.2.4": () => [404, { message: "Not Found" }],
+    },
+    hotfixEvent,
+  );
+  assert.equal(result.ok, false);
+  assert.match(result.stdout, /::error::PR description must contain the release notes/);
+  const patched = result.calls.find((call) => call.route === "PATCH pulls/9")!.body.body;
+  assert.equal(
+    patched,
+    `${written}\n\n<!-- release-flow:notes -->\n<!-- Write the release notes for users here. -->\n<!-- /release-flow:notes -->\n`,
+  );
 });
 
 test("resolve on a push to main takes the version and notes from the merged PR", async () => {

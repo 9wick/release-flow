@@ -16,7 +16,13 @@ export const writeSection = (body: string, section: Section, content: string): s
   return rest === "" ? `${block}\n` : `${rest}\n\n${block}\n`;
 };
 
-export const notesTemplate = writeSection("", "notes", "<!-- Write the release notes for users here. -->");
+// Gives PRs that people open by hand, such as hotfixes, the same place to write as bot-made release PRs.
+export const withNotesSection = (body: string): string =>
+  readSection(body, "notes") === undefined
+    ? writeSection(body, "notes", "<!-- Write the release notes for users here. -->")
+    : body;
+
+export const notesTemplate = withNotesSection("");
 
 // HTML comments are the template's guidance, not part of the notes.
 export const releaseNotes = (body: string): string =>
