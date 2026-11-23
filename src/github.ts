@@ -89,8 +89,8 @@ export const createGitHub = ({ token, apiUrl, repository }: GitHubConfig) => {
     draft: boolean;
   }): Promise<PullRequest> => toPullRequest(await request<RawPullRequest>("POST", "pulls", pr));
 
-  const updatePullRequestBody = async (number: number, body: string): Promise<void> => {
-    await request("PATCH", `pulls/${number}`, { body });
+  const updatePullRequest = async (number: number, fields: { title?: string; body?: string }): Promise<void> => {
+    await request("PATCH", `pulls/${number}`, fields);
   };
 
   const mergedPullRequestOf = async (sha: string, base: string): Promise<PullRequest | undefined> => {
@@ -115,7 +115,7 @@ export const createGitHub = ({ token, apiUrl, repository }: GitHubConfig) => {
     openPullRequest,
     getPullRequest,
     createPullRequest,
-    updatePullRequestBody,
+    updatePullRequest,
     mergedPullRequestOf,
     generateNotes,
   };

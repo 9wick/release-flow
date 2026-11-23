@@ -4,7 +4,7 @@ on:
     branches: [main, stg, develop]
 permissions:
   contents: write # to record the prod release
-  pull-requests: read # to find the release PR behind a push to main
+  pull-requests: write # to find the release PR behind a push to main and refresh the open one
 concurrency:
   group: deploy-${{ github.ref }}
   cancel-in-progress: false
@@ -36,3 +36,9 @@ jobs:
           SHA: ${{ steps.release.outputs.sha }}
           NOTES: ${{ steps.release.outputs.notes }}
         run: gh release view "$TAG" > /dev/null 2>&1 || gh release create "$TAG" --target "$SHA" --title "$TAG" --notes "$NOTES"
+
+      # A hotfix may have taken the open release PR's version. Tags made with GITHUB_TOKEN start no
+      # workflow, so refresh the release PR here rather than on a tag push
+      - name: Refresh the open release PR
+        if: ${{ steps.release.outputs.environment == 'prod' }}
+        uses: 9wick/release-flow/release-pr@v1

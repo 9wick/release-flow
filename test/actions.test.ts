@@ -124,6 +124,27 @@ test("release-pr keeps the existing PR's title and the description people wrote"
   assert.equal(result.outputs.created, "false");
 });
 
+test("release-pr moves the title past a version a hotfix took", async () => {
+  let fields: { title?: string; body?: string } = {};
+  const body = "<!-- release-flow:notes -->\nFaster sync.\n<!-- /release-flow:notes -->\n";
+  const result = await runAction(
+    "release-pr",
+    {
+      "GET compare/main...stg": () => [200, { ahead_by: 1 }],
+      "GET git/matching-refs/tags/v": tags("v1.2.3", "v1.2.4"),
+      "GET pulls": () => [200, [pr({ title: "1.2.4", body })]],
+      "POST releases/generate-notes": () => [200, { body: "* Sync" }],
+      "GET pulls/7": () => [200, pr({ title: "1.2.4", body })],
+      "PATCH pulls/7": (req) => ((fields = req), [200, pr(req)]),
+    },
+    push("main", "m2"),
+  );
+  assert.ok(result.ok, result.stdout);
+  assert.equal(result.calls.find((call) => call.route === "POST releases/generate-notes")!.body.tag_name, "v1.2.5");
+  assert.equal(fields.title, "1.2.5");
+  assert.match(fields.body!, /Faster sync\./);
+});
+
 test("release-pr does nothing when staging has nothing new", async () => {
   const result = await runAction("release-pr", { "GET compare/main...stg": () => [200, { ahead_by: 0 }] }, push("stg", "s1"));
   assert.ok(result.ok, result.stdout);
@@ -148,7 +169,7 @@ test("check rejects a hotfix PR whose version is already released", async () => 
     hotfixEvent("1.2.3", body),
   );
   assert.equal(result.ok, false);
-  assert.match(result.stdout, /::error::1\.2\.3 is already released at old/);
+  assert.match(result.stdout, /::error::1\.2\.3 is already released at old\. Use a newer version such as 1\.2\.4\./);
   assert.ok(!result.calls.some((call) => call.route.endsWith("pulls/9")), "a body with the section is left alone");
 });
 

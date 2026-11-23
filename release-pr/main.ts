@@ -1,4 +1,5 @@
 import { notesTemplate, writeSection } from "../src/body.ts";
+import { proposedTitle } from "../src/release.ts";
 import { context, input, run, setOutputs } from "../src/runtime.ts";
 import { formatVersion, latestVersion, nextPatch, parseVersion } from "../src/version.ts";
 
@@ -25,14 +26,20 @@ run(async () => {
     }));
 
   const changes = await github.generateNotes({
-    tag: `${tagPrefix}${formatVersion(parseVersion(pr.title.trim()) ?? nextPatch(latest))}`,
+    tag: `${tagPrefix}${formatVersion(parseVersion(proposedTitle(pr.title, latest).trim()) ?? nextPatch(latest))}`,
     target: staging,
     previousTag: latest && `${tagPrefix}${formatVersion(latest)}`,
   });
   // Re-read right before writing so an edit made while notes were generated is kept.
-  const { body } = await github.getPullRequest(pr.number);
-  const updated = writeSection(body, "changes", changes);
-  if (updated !== body) await github.updatePullRequestBody(pr.number, updated);
+  const current = await github.getPullRequest(pr.number);
+  const title = proposedTitle(current.title, latest);
+  const body = writeSection(current.body, "changes", changes);
+  if (title !== current.title || body !== current.body) {
+    await github.updatePullRequest(pr.number, {
+      ...(title === current.title ? {} : { title }),
+      ...(body === current.body ? {} : { body }),
+    });
+  }
 
   setOutputs({
     "pull-request-number": String(pr.number),

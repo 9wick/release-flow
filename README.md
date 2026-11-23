@@ -10,13 +10,15 @@ main・stg・開発ブランチの3段構成で、PR を承認の場にしてリ
 
 1. 開発ブランチの PR を stg にマージします。stg へデプロイされます。
 2. stg が更新されるたびに、`release-pr` が stg→main の Release PR を1件だけ開いておきます。
-   - 初回は draft で作り、title に「最新のリリース + patch」を仮に入れます。
+   - 初回は draft で作り、title に既定値として「最新のリリース + patch」を入れます。人はこれを上書きできます。
    - description には、原稿の区画と PR 一覧の区画を置きます。一覧の区画には、前回のリリースから stg にマージされた PR を bot が書きます。
-3. 人が title を版番号にし、原稿の区画に利用者向けの変更内容を書いて、draft を解除します。`check` が版と原稿を検証します。
+3. 人が必要なら title の版を上書きし(minor や major を上げるときなど)、原稿の区画に利用者向けの変更内容を書いて、draft を解除します。`check` が版と原稿を検証します。
 4. Release PR をマージすると main へデプロイされます。`resolve` が PR の title と description から版と原稿を返します。
 5. デプロイが成功したら、タグ `v<版>` を作ります(GitHub Release を作ればタグもできます)。次の Release PR の版はこのタグから決まります。
 
 hotfix は main 宛ての PR を任意のブランチから作れば、同じ手順で出せます。title と description の決まりも、`check` の検証も同じです。stg を経由しないので、マージ済み PR の一覧は付きません。原稿の区画は、最初の `check` が空のまま足します。
+
+hotfix の版は、Release PR と同じく「最新より新しいこと」だけが条件です。版の形でない title や古い版には、`check` が次の patch を添えてエラーを出します。hotfix が開いている Release PR の版を使ってしまった場合は、deploy の後に `release-pr` を呼べば、Release PR の title が新しい既定値に戻ります([`deploy.yml`](examples/deploy.yml) の最後の step)。タグを作る deploy の中で呼ぶのは、`GITHUB_TOKEN` で作ったタグでは別の workflow が起動しないからです。
 
 ## description の区画
 
@@ -51,7 +53,9 @@ bot が書く PR 一覧。bot はこの区画の中だけを書き換える。
 
 ### `release-pr`
 
-staging-branch に main にないコミットがあれば、staging→production の PR を1件開いておき、description の一覧の区画を更新します。書き換えるのは一覧の区画の中だけで、原稿の区画と title には触れません。
+staging-branch に main にないコミットがあれば、staging→production の PR を1件開いておき、description の一覧の区画を更新します。書き換えるのは一覧の区画の中だけで、原稿の区画には触れません。
+
+title は既定値の「最新のリリース + patch」として扱います。title の版がその後のリリース(hotfix など)に追いつかれて最新以下になっていたら、新しい既定値に戻します。最新より新しい版は人が選んだものとして、版の形になっていない title は書き間違いの可能性があるので、どちらも書き換えません(後者は `check` が止めます)。
 
 | 入力 | 既定値 | 意味 |
 | --- | --- | --- |
@@ -91,7 +95,7 @@ PR を通らずに main へ push されたコミットには版がないので�
 
 - [`release-pr.yml`](examples/release-pr.yml) は stg への push で Release PR を更新します。
 - [`release-check.yml`](examples/release-check.yml) は main 宛ての PR を検証します。
-- [`deploy.yml`](examples/deploy.yml) は `resolve` の結果でデプロイし、prod なら GitHub Release を作ります。
+- [`deploy.yml`](examples/deploy.yml) は `resolve` の結果でデプロイし、prod なら GitHub Release を作って Release PR を更新します。
 
 リポジトリの設定で次を有効にしてください。
 

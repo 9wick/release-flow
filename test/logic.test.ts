@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { notesTemplate, releaseNotes, writeSection } from "../src/body.ts";
 import { environmentOf } from "../src/environment.ts";
-import { checkRelease } from "../src/release.ts";
+import { checkRelease, proposedTitle } from "../src/release.ts";
 import { latestVersion, nextPatch, parseVersion, previewVersion } from "../src/version.ts";
 
 const v = (text: string) => parseVersion(text)!;
@@ -63,4 +63,13 @@ test("a release needs a new version and notes written by a person", () => {
   assert.equal(problemsOf("1.3.0", notes, "abc").length, 1, "tag taken before merge");
   assert.equal(problemsOf("1.3.0", notes, "abc", "def").length, 1, "tag on another commit");
   assert.equal(problemsOf("1.2.3", notes, "abc", "abc").length, 0, "re-run of the same release");
+});
+
+test("a title caught up by a later release goes back to the proposal, and people's choices stay", () => {
+  const latest = v("1.2.4");
+  assert.equal(proposedTitle("1.2.4", latest), "1.2.5", "a hotfix took the version");
+  assert.equal(proposedTitle("1.2.3", latest), "1.2.5");
+  assert.equal(proposedTitle("1.3.0", latest), "1.3.0", "a newer version is a person's choice");
+  assert.equal(proposedTitle("v1.3", latest), "v1.3", "a malformed title may mean a bigger bump");
+  assert.equal(proposedTitle("1.2.4", undefined), "1.2.4");
 });

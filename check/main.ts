@@ -9,7 +9,7 @@ import { formatVersion } from "../src/version.ts";
 const addNotesSection = async (github: GitHub, number: number): Promise<void> => {
   const { body } = await github.getPullRequest(number);
   const updated = withNotesSection(body);
-  if (updated !== body) await github.updatePullRequestBody(number, updated);
+  if (updated !== body) await github.updatePullRequest(number, { body: updated });
 };
 
 run(async () => {
