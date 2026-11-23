@@ -1,3 +1,4 @@
+import { authoredNotes } from "../src/body.ts";
 import { environmentOf } from "../src/environment.ts";
 import { pullRequestOf } from "../src/event.ts";
 import { verifyRelease } from "../src/release.ts";
@@ -43,7 +44,7 @@ run(async () => {
     environment,
     version,
     tag: `${tagPrefix}${version}`,
-    notes: release.body.trim(),
+    notes: authoredNotes(release.body),
     sha: target.sha,
     "pull-request-number": String(release.number),
   });

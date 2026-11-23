@@ -148,7 +148,16 @@ test("resolve on a push to main takes the version and notes from the merged PR",
     "resolve",
     {
       "GET git/matching-refs/tags/v": tags("v1.2.3"),
-      "GET commits/m1/pulls": () => [200, [pr({ title: "1.3.0", body: "Faster sync.", merged_at: "2026-11-23T00:00:00Z" })]],
+      "GET commits/m1/pulls": () => [
+        200,
+        [
+          pr({
+            title: "1.3.0",
+            body: "Faster sync.\n\n<!-- release-flow:changes -->\n* Sync by @a in #5\n<!-- /release-flow:changes -->\n",
+            merged_at: "2026-11-23T00:00:00Z",
+          }),
+        ],
+      ],
       "GET commits/refs/tags/v1.3.0": () => [404, { message: "Not Found" }],
     },
     push("main", "m1"),

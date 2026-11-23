@@ -61,7 +61,7 @@ main 宛ての PR で、次の3つを確かめます。
 
 stg と dev の版は「最新のリリース + patch」に UTC の日時を付けたものです。SemVer の順序では最新のリリースより新しく、次のリリースより古くなります。
 
-prod のとき、`notes` に Release PR の description を、`pull-request-number` にその PR の番号を返します。マージ時点でも `check` と同じ検証をします。Release PR を開いている間に hotfix が同じ版で出た場合は、ここで止まります。その版のタグが同じコミットにすでにあるときは、失敗したデプロイの再実行とみなして通します。
+prod のとき、`notes` に Release PR の description のうち人が書いた部分(bot の PR 一覧を除いたもの)を、`pull-request-number` にその PR の番号を返します。マージ時点でも `check` と同じ検証をします。Release PR を開いている間に hotfix が同じ版で出た場合は、ここで止まります。その版のタグが同じコミットにすでにあるときは、失敗したデプロイの再実行とみなして通します。
 
 PR を通らずに main へ push されたコミットには版がないので、失敗します。
 
