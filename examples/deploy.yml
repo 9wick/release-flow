@@ -1,15 +1,16 @@
 name: Deploy
 on:
-  push:
-    branches: [main, stg, develop]
+  pull_request:
+    types: [closed]
+    branches: [main, stg]
 permissions:
   contents: write # to record the prod release
-  pull-requests: read # to find the release PR behind a push to main
 concurrency:
   group: deploy-${{ github.ref }}
   cancel-in-progress: false
 jobs:
   deploy:
+    if: ${{ github.event.pull_request.merged == true }}
     runs-on: ubuntu-latest
     steps:
       - id: release
