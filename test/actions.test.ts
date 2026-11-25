@@ -17,6 +17,7 @@ const runAction = async (
   action: string,
   routes: Record<string, Route>,
   github: { eventName: string; event: unknown; ref: string; sha: string },
+  inputs: Record<string, string> = {},
 ) => {
   const calls: Call[] = [];
   const server = createServer(async (req, res) => {
@@ -44,6 +45,9 @@ const runAction = async (
         "INPUT_STAGING-BRANCH": "stg",
         "INPUT_TAG-PREFIX": "v",
         "INPUT_DRAFT": "true",
+        "INPUT_STAGING-PRERELEASE": "stg",
+        "INPUT_DEVELOPMENT-PRERELEASE": "dev",
+        ...inputs,
         GITHUB_API_URL: `http://127.0.0.1:${port}`,
         GITHUB_REPOSITORY: "acme/app",
         GITHUB_EVENT_NAME: github.eventName,
@@ -323,4 +327,27 @@ test("resolve on staging fails when the tag cannot be created", async () => {
   );
   assert.equal(result.ok, false);
   assert.match(result.stdout, /::error::POST git\/refs for v1\.2\.4-stg\.0 failed: 403/);
+});
+
+test("resolve uses the configured pre-release labels", async () => {
+  const routes = {
+    "GET git/matching-refs/tags/v": tags("v1.2.3", "v1.2.4-stg.4", "v1.2.4-beta.0"),
+    "GET commits/refs/tags/v1.2.4-beta.0": () => [200, { sha: "older" }] as [number, unknown],
+    "POST git/refs": (req: any) => [201, { ref: req.ref }] as [number, unknown],
+  };
+  const labels = { "INPUT_STAGING-PRERELEASE": "beta", "INPUT_DEVELOPMENT-PRERELEASE": "alpha" };
+  const staging = await runAction("resolve", routes, push("stg", "s1"), labels);
+  assert.ok(staging.ok, staging.stdout);
+  assert.deepEqual([staging.outputs.environment, staging.outputs.version], ["stg", "1.2.4-beta.1"]);
+  const dev = await runAction("resolve", routes, push("develop", "d1"), labels);
+  assert.ok(dev.ok, dev.stdout);
+  assert.equal(dev.outputs.environment, "dev");
+  assert.match(dev.outputs.version!, /^1\.2\.4-alpha\.\d{14}$/);
+});
+
+test("resolve rejects a label that is not a pre-release identifier", async () => {
+  const result = await runAction("resolve", {}, push("stg", "s1"), { "INPUT_STAGING-PRERELEASE": "beta.1" });
+  assert.equal(result.ok, false);
+  assert.match(result.stdout, /::error::"beta\.1" is not a pre-release label/);
+  assert.deepEqual(result.calls, [], "nothing is tagged");
 });

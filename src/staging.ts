@@ -10,15 +10,16 @@ export const tagStagingVersion = async (
   tags: readonly string[],
   prefix: string,
   latest: Version | undefined,
+  label: string,
   sha: string,
 ): Promise<string> => {
-  const last = lastStagingNumber(tags, prefix, latest);
+  const last = lastStagingNumber(tags, prefix, latest, label);
   if (last !== undefined) {
-    const version = stagingVersion(latest, last);
+    const version = stagingVersion(latest, label, last);
     if ((await github.tagCommit(`${prefix}${version}`)) === sha) return version;
   }
   for (let number = last === undefined ? 0 : last + 1; ; number++) {
-    const version = stagingVersion(latest, number);
+    const version = stagingVersion(latest, label, number);
     if (await github.createTag(`${prefix}${version}`, sha)) return version;
   }
 };
