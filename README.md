@@ -100,7 +100,7 @@ on:
     types: [closed]
     branches: [main]
 permissions:
-  contents: write # to record the prod release
+  contents: write # to tag staging versions and record the prod release
 concurrency:
   group: deploy-${{ github.ref }}
   cancel-in-progress: false
@@ -169,9 +169,10 @@ GitHub Release に使うのは `notes` 内の文章です。欄内の HTML コ�
 | --- | --- | --- |
 | リリースの版 | `1.3.0` | マージした PR のタイトル |
 | 最新のリリース | `1.2.3` | `v<major>.<minor>.<patch>` の形のタグのうち、SemVer で最も大きいもの |
-| `stg` と開発ブランチの版 | `1.2.4-stg.20261123050607` | 次の patch 版に、環境名と UTC の日時を付けたもの |
+| `stg` の版 | `1.2.4-stg.0` | 次の patch 版に、`stg` と連番を付けたもの。連番はリリースごとに 0 から数え直す |
+| 開発ブランチの版 | `1.2.4-dev.20261123050607` | 次の patch 版に、環境名と UTC の日時を付けたもの |
 
-`stg` と開発ブランチの版は、SemVer の順序で最新のリリースより新しく、次のリリースより古くなります。これらはタグにしません。`v1.2.4-stg.…` のようなタグがあっても、リリースとしては数えません。
+`stg` と開発ブランチの版は、SemVer の順序で最新のリリースより新しく、次のリリースより古くなります。`stg` の版は `resolve` がタグ（例 `v1.2.4-stg.0`）にして、次の連番をそこから数えます。同じコミットでやり直したときは同じ版を使います。開発ブランチの版はタグにしません。`v1.2.4-stg.0` のようなタグは、リリースとしては数えません。
 
 ### アクションの入出力と権限
 
@@ -218,18 +219,18 @@ GitHub Release に使うのは `notes` 内の文章です。欄内の HTML コ�
 | きっかけ | `environment` | `version` | `sha` |
 | --- | --- | --- | --- |
 | 本番ブランチ宛ての PR のマージ | `prod` | マージ時点の PR タイトル | マージ結果のコミット |
-| ステージングブランチ宛ての PR のマージ、ステージングブランチへの `push` や `workflow_dispatch` | `stg` | `1.2.4-stg.<UTC の日時>` | マージ結果または実行対象のコミット |
+| ステージングブランチ宛ての PR のマージ、ステージングブランチへの `push` や `workflow_dispatch` | `stg` | `1.2.4-stg.<連番>` | マージ結果または実行対象のコミット |
 | ほかのブランチ | `dev` | `1.2.4-dev.<UTC の日時>` | そのコミット |
 
 `prod` のときは、`check` と同じ検証をもう一度行います。同じ版のタグが同じコミットにあるときは、やり直しとして通します。
 
-`resolve` はタグの参照に `contents: read` を使います。既存の workflow が本番ブランチへの `push` で起動する場合は、コミットに対応するマージ済み PR の検索に `pull-requests: read` も必要です。該当する PR が見つからない場合は失敗します。
+`resolve` はタグの参照に `contents: read` を使い、`stg` の版のタグを作るときは `contents: write` を使います。既存の workflow が本番ブランチへの `push` で起動する場合は、コミットに対応するマージ済み PR の検索に `pull-requests: read` も必要です。該当する PR が見つからない場合は失敗します。
 
 | 出力 | 説明 |
 | --- | --- |
 | `environment` | `prod`、`stg`、`dev` のどれか |
 | `version` | 出す版 |
-| `tag` | `tag-prefix` を付けた版。`prod` では、デプロイが成功したらこのタグを作る |
+| `tag` | `tag-prefix` を付けた版。`prod` では、デプロイが成功したらこのタグを作る。`stg` では `resolve` が作成済み |
 | `notes` | `prod` ではリリースノート欄の中身。ほかでは空 |
 | `sha` | デプロイするコミット |
 | `pull-request-number` | `prod` ではマージした PR の番号。ほかでは空 |

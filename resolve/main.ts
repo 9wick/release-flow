@@ -3,6 +3,7 @@ import { environmentOf } from "../src/environment.ts";
 import { pullRequestOf } from "../src/event.ts";
 import { verifyRelease } from "../src/release.ts";
 import { context, run, setOutputs } from "../src/runtime.ts";
+import { tagStagingVersion } from "../src/staging.ts";
 import { formatVersion, latestVersion, previewVersion } from "../src/version.ts";
 
 run(async () => {
@@ -15,9 +16,13 @@ run(async () => {
       : { branch: pr.headBranch, sha: pr.headSha }
     : { branch: ref, sha };
   const environment = environmentOf(target.branch, branches);
-  const latest = latestVersion(await github.tagsStartingWith(tagPrefix), tagPrefix);
+  const tags = await github.tagsStartingWith(tagPrefix);
+  const latest = latestVersion(tags, tagPrefix);
   if (environment !== "prod") {
-    const version = previewVersion(latest, environment, new Date());
+    const version =
+      environment === "stg"
+        ? await tagStagingVersion(github, tags, tagPrefix, latest, target.sha)
+        : previewVersion(latest, environment, new Date());
     setOutputs({
       environment,
       version,

@@ -251,3 +251,76 @@ test("resolve on other branches gives a preview version", async () => {
   assert.match(result.outputs.version!, /^1\.2\.4-dev\.\d{14}$/);
   assert.equal(result.outputs.sha, "d1");
 });
+
+test("resolve on staging tags the next number for the upcoming version", async () => {
+  const taken = new Set(["v1.2.4-stg.2"]);
+  const result = await runAction(
+    "resolve",
+    {
+      "GET git/matching-refs/tags/v": tags("v1.2.3", "v1.2.3-stg.5", "v1.2.4-stg.0", "v1.2.4-stg.1", "v1.2.4-stg.x"),
+      "GET commits/refs/tags/v1.2.4-stg.1": () => [200, { sha: "older" }],
+      // Another run tagged stg.2 after this one listed the tags.
+      "POST git/refs": (req) =>
+        taken.has(req.ref.replace("refs/tags/", ""))
+          ? [422, { message: "Reference already exists" }]
+          : [201, { ref: req.ref }],
+    },
+    push("stg", "s1"),
+  );
+  assert.ok(result.ok, result.stdout);
+  assert.deepEqual(
+    result.calls.filter((call) => call.route === "POST git/refs").map((call) => call.body),
+    [
+      { ref: "refs/tags/v1.2.4-stg.2", sha: "s1" },
+      { ref: "refs/tags/v1.2.4-stg.3", sha: "s1" },
+    ],
+  );
+  assert.deepEqual(result.outputs, {
+    environment: "stg",
+    version: "1.2.4-stg.3",
+    tag: "v1.2.4-stg.3",
+    notes: "",
+    sha: "s1",
+    "pull-request-number": "",
+  });
+});
+
+test("resolve on staging starts at 0 after a release", async () => {
+  const result = await runAction(
+    "resolve",
+    {
+      "GET git/matching-refs/tags/v": tags("v1.2.3", "v1.2.3-stg.4"),
+      "POST git/refs": (req) => [201, { ref: req.ref }],
+    },
+    push("stg", "s1"),
+  );
+  assert.ok(result.ok, result.stdout);
+  assert.equal(result.outputs.version, "1.2.4-stg.0");
+});
+
+test("resolve on staging reuses the tag when rerun for the same commit", async () => {
+  const result = await runAction(
+    "resolve",
+    {
+      "GET git/matching-refs/tags/v": tags("v1.2.3", "v1.2.4-stg.0"),
+      "GET commits/refs/tags/v1.2.4-stg.0": () => [200, { sha: "s1" }],
+    },
+    push("stg", "s1"),
+  );
+  assert.ok(result.ok, result.stdout);
+  assert.equal(result.outputs.version, "1.2.4-stg.0");
+  assert.ok(!result.calls.some((call) => call.route === "POST git/refs"), "no new tag");
+});
+
+test("resolve on staging fails when the tag cannot be created", async () => {
+  const result = await runAction(
+    "resolve",
+    {
+      "GET git/matching-refs/tags/v": tags("v1.2.3"),
+      "POST git/refs": () => [403, { message: "Resource not accessible by integration" }],
+    },
+    push("stg", "s1"),
+  );
+  assert.equal(result.ok, false);
+  assert.match(result.stdout, /::error::POST git\/refs for v1\.2\.4-stg\.0 failed: 403/);
+});

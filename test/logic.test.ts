@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { releaseNotes, withNotesSection, writeSection } from "../src/body.ts";
 import { environmentOf } from "../src/environment.ts";
 import { checkRelease, withDefaults } from "../src/release.ts";
-import { latestVersion, nextPatch, parseVersion, previewVersion } from "../src/version.ts";
+import { lastStagingNumber, latestVersion, nextPatch, parseVersion, previewVersion } from "../src/version.ts";
 
 const v = (text: string) => parseVersion(text)!;
 
@@ -19,7 +19,13 @@ test("versions with a v, a suffix or leading zeros are not release versions", ()
 
 test("next patch and previews sit between the latest release and the next one", () => {
   assert.deepEqual(nextPatch(undefined), v("0.0.1"));
-  assert.equal(previewVersion(v("1.2.3"), "stg", new Date("2026-11-23T05:06:07.890Z")), "1.2.4-stg.20261123050607");
+  assert.equal(previewVersion(v("1.2.3"), "dev", new Date("2026-11-23T05:06:07.890Z")), "1.2.4-dev.20261123050607");
+});
+
+test("staging numbers count only the upcoming version's tags, numerically", () => {
+  const tags = ["v1.2.4-stg.2", "v1.2.4-stg.10", "v1.2.4-stg.01", "v1.2.4-stg.3.1", "v1.2.3-stg.99", "x1.2.4-stg.50"];
+  assert.equal(lastStagingNumber(tags, "v", v("1.2.3")), 10);
+  assert.equal(lastStagingNumber(tags, "v", v("1.2.4")), undefined);
 });
 
 test("environment follows the branch", () => {

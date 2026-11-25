@@ -67,6 +67,15 @@ export const createGitHub = ({ token, apiUrl, repository }: GitHubConfig) => {
   const tagCommit = async (tag: string): Promise<string | undefined> =>
     (await requestOptional<{ sha: string }>(`commits/${encodeURIComponent(`refs/tags/${tag}`)}`))?.sha;
 
+  // False when the tag already exists, so a caller racing another run can try the next name.
+  const createTag = async (tag: string, sha: string): Promise<boolean> => {
+    const response = await call("POST", "git/refs", { ref: `refs/tags/${tag}`, sha });
+    if (response.ok) return true;
+    const text = await response.text();
+    if (response.status === 422 && text.includes("Reference already exists")) return false;
+    throw new Error(`POST git/refs for ${tag} failed: ${response.status} ${text}`);
+  };
+
   const aheadBy = async (base: string, head: string): Promise<number> =>
     (await request<{ ahead_by: number }>("GET", `compare/${encodeURIComponent(base)}...${encodeURIComponent(head)}`))
       .ahead_by;
@@ -111,6 +120,7 @@ export const createGitHub = ({ token, apiUrl, repository }: GitHubConfig) => {
   return {
     tagsStartingWith,
     tagCommit,
+    createTag,
     aheadBy,
     openPullRequest,
     getPullRequest,
