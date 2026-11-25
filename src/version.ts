@@ -35,18 +35,29 @@ export const latestVersion = (tags: readonly string[], prefix: string): Version 
 
 const timestamp = (now: Date): string => now.toISOString().replace(/\D/g, "").slice(0, 14);
 
+// SemVer pre-release identifier. At least one non-digit, so it is never compared as a number
+// and never collides with the sequence or timestamp that follows it.
+const prereleaseLabel = /^[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*$/;
+
+export const isPrereleaseLabel = (text: string): boolean => prereleaseLabel.test(text);
+
 // Sorts above the latest release and below the next one, so previews never outrank a release.
-export const previewVersion = (latest: Version | undefined, environment: string, now: Date): string =>
-  `${formatVersion(nextPatch(latest))}-${environment}.${timestamp(now)}`;
+export const previewVersion = (latest: Version | undefined, label: string, now: Date): string =>
+  `${formatVersion(nextPatch(latest))}-${label}.${timestamp(now)}`;
 
 const sequenceNumber = /^(0|[1-9]\d*)$/;
 
-export const stagingVersion = (latest: Version | undefined, number: number): string =>
-  `${formatVersion(nextPatch(latest))}-stg.${number}`;
+export const stagingVersion = (latest: Version | undefined, label: string, number: number): string =>
+  `${formatVersion(nextPatch(latest))}-${label}.${number}`;
 
-// Only tags of the upcoming version count, so the sequence restarts at 0 after each release.
-export const lastStagingNumber = (tags: readonly string[], prefix: string, latest: Version | undefined): number | undefined => {
-  const head = `${prefix}${formatVersion(nextPatch(latest))}-stg.`;
+// Only tags of the upcoming version and label count, so the sequence restarts at 0 after each release.
+export const lastStagingNumber = (
+  tags: readonly string[],
+  prefix: string,
+  latest: Version | undefined,
+  label: string,
+): number | undefined => {
+  const head = `${prefix}${stagingVersion(latest, label, 0).slice(0, -1)}`;
   const numbers = tags
     .filter((tag) => tag.startsWith(head))
     .map((tag) => tag.slice(head.length))

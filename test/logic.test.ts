@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { releaseNotes, withNotesSection, writeSection } from "../src/body.ts";
 import { environmentOf } from "../src/environment.ts";
 import { checkRelease, withDefaults } from "../src/release.ts";
-import { lastStagingNumber, latestVersion, nextPatch, parseVersion, previewVersion } from "../src/version.ts";
+import { isPrereleaseLabel, lastStagingNumber, latestVersion, nextPatch, parseVersion, previewVersion } from "../src/version.ts";
 
 const v = (text: string) => parseVersion(text)!;
 
@@ -24,8 +24,14 @@ test("next patch and previews sit between the latest release and the next one", 
 
 test("staging numbers count only the upcoming version's tags, numerically", () => {
   const tags = ["v1.2.4-stg.2", "v1.2.4-stg.10", "v1.2.4-stg.01", "v1.2.4-stg.3.1", "v1.2.3-stg.99", "x1.2.4-stg.50"];
-  assert.equal(lastStagingNumber(tags, "v", v("1.2.3")), 10);
-  assert.equal(lastStagingNumber(tags, "v", v("1.2.4")), undefined);
+  assert.equal(lastStagingNumber(tags, "v", v("1.2.3"), "stg"), 10);
+  assert.equal(lastStagingNumber(tags, "v", v("1.2.4"), "stg"), undefined);
+  assert.equal(lastStagingNumber(tags, "v", v("1.2.3"), "beta"), undefined);
+});
+
+test("pre-release labels are SemVer identifiers that are not plain numbers", () => {
+  for (const label of ["stg", "beta", "rc-1", "2b"]) assert.ok(isPrereleaseLabel(label), label);
+  for (const label of ["", "1", "beta.1", "β", "a_b"]) assert.ok(!isPrereleaseLabel(label), label);
 });
 
 test("environment follows the branch", () => {

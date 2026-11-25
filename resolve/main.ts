@@ -2,12 +2,22 @@ import { releaseNotes } from "../src/body.ts";
 import { environmentOf } from "../src/environment.ts";
 import { pullRequestOf } from "../src/event.ts";
 import { verifyRelease } from "../src/release.ts";
-import { context, run, setOutputs } from "../src/runtime.ts";
+import { context, input, run, setOutputs } from "../src/runtime.ts";
 import { tagStagingVersion } from "../src/staging.ts";
-import { formatVersion, latestVersion, previewVersion } from "../src/version.ts";
+import { formatVersion, isPrereleaseLabel, latestVersion, previewVersion } from "../src/version.ts";
 
 run(async () => {
   const { github, branches, tagPrefix, event, ref, sha } = context();
+  const labels = { stg: input("staging-prerelease"), dev: input("development-prerelease") };
+  const invalid = Object.values(labels).filter((label) => !isPrereleaseLabel(label));
+  if (invalid.length > 0) {
+    return {
+      ok: false,
+      problems: invalid.map(
+        (label) => `"${label}" is not a pre-release label. Use letters, digits and hyphens with at least one non-digit, such as beta.`,
+      ),
+    };
+  }
   const pr = pullRequestOf(event);
   // A merged PR deploys its base branch at the merge commit; an open PR previews its head.
   const target = pr
@@ -21,8 +31,8 @@ run(async () => {
   if (environment !== "prod") {
     const version =
       environment === "stg"
-        ? await tagStagingVersion(github, tags, tagPrefix, latest, target.sha)
-        : previewVersion(latest, environment, new Date());
+        ? await tagStagingVersion(github, tags, tagPrefix, latest, labels.stg, target.sha)
+        : previewVersion(latest, labels.dev, new Date());
     setOutputs({
       environment,
       version,
