@@ -3,11 +3,18 @@ import { readdirSync, readFileSync } from "node:fs";
 import { test } from "node:test";
 
 const root = new URL("..", import.meta.url);
-const readme = readFileSync(new URL("README.md", root), "utf8");
+const readmes = ["README.md", "README.ja.md"];
 
-test("the README quickstart shows each example workflow as it is", () => {
-  for (const name of readdirSync(new URL("examples/", root))) {
-    const workflow = readFileSync(new URL(`examples/${name}`, root), "utf8");
-    assert.ok(readme.includes(`\`\`\`yaml\n# .github/workflows/${name}\n${workflow}\`\`\``), `${name} differs from the README`);
-  }
-});
+for (const readmePath of readmes) {
+  const readme = readFileSync(new URL(readmePath, root), "utf8");
+
+  test(`${readmePath} quickstart shows each example workflow as it is`, () => {
+    for (const name of readdirSync(new URL("examples/", root))) {
+      const workflow = readFileSync(new URL(`examples/${name}`, root), "utf8");
+      assert.ok(
+        readme.includes(`\`\`\`yaml\n# .github/workflows/${name}\n${workflow}\`\`\``),
+        `${name} differs from ${readmePath}`,
+      );
+    }
+  });
+}

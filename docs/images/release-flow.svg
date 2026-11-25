@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="540" viewBox="0 0 800 540" role="img" aria-labelledby="title description">
-  <title id="title">通常リリースと hotfix のブランチフロー</title>
-  <desc id="description">通常リリースでは、開発ブランチを stg にマージすると stg から main への Release PR が開く。Release PR に版とリリースノートを書き、main にマージすると本番にデプロイされ、成功後にマージコミットへタグ v1.2.4 を付ける。hotfix では main から切ったブランチを main 宛ての PR でマージし、成功後にタグ v1.2.5 を付ける。</desc>
+  <title id="title">Standard release and hotfix branch flow</title>
+  <desc id="description">In a standard release, merging a feature branch into stg opens a Release PR from stg to main. After setting the version and release notes on the Release PR and merging it into main, production deploys and tags the merge commit with v1.2.4. For a hotfix, a branch from main is merged back into main via a PR and tagged with v1.2.5 after deployment.</desc>
 
   <style>
-    text { font-family: system-ui, 'Hiragino Sans', 'Noto Sans JP', 'Yu Gothic', sans-serif; }
+    text { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
     .heading { font-size: 20px; font-weight: 700; fill: #172333; }
     .branch { font: 600 16px ui-monospace, SFMono-Regular, Menlo, monospace; }
     .caption { font-size: 14px; fill: #3a4859; }
@@ -24,8 +24,8 @@
 
   <rect x="1" y="1" width="798" height="538" rx="16" fill="#f7f9fc" stroke="#d6dfe9" stroke-width="2"/>
 
-  <!-- 通常リリース -->
-  <text class="heading" x="24" y="38">通常リリース</text>
+  <!-- Standard release -->
+  <text class="heading" x="24" y="38">Standard release</text>
   <text class="branch" x="24" y="86" fill="#5b6778">feature/*</text>
   <text class="branch" x="24" y="136" fill="#245fac">stg</text>
   <text class="branch" x="24" y="206" fill="#126851">main</text>
@@ -54,30 +54,30 @@
   <circle cx="615" cy="169" r="12" fill="#a87b12"/>
   <text class="num" x="615" y="169">4</text>
 
-  <circle cx="152" cy="245" r="12" fill="#245fac"/>
-  <text class="num" x="152" y="245">1</text>
-  <text class="caption-strong" x="171" y="250">stg にマージ</text>
-  <text class="caption" x="171" y="272">Release PR が開く</text>
+  <circle cx="40" cy="245" r="12" fill="#245fac"/>
+  <text class="num" x="40" y="245">1</text>
+  <text class="caption-strong" x="59" y="250">Merge to stg</text>
+  <text class="caption" x="59" y="272">Opens Release PR</text>
 
-  <circle cx="312" cy="245" r="12" fill="#72509e"/>
-  <text class="num" x="312" y="245">2</text>
-  <text class="caption-strong" x="331" y="250">版とノートを書く</text>
-  <text class="caption" x="331" y="272">Release PR を編集</text>
+  <circle cx="228" cy="245" r="12" fill="#72509e"/>
+  <text class="num" x="228" y="245">2</text>
+  <text class="caption-strong" x="247" y="250">Set version &amp; notes</text>
+  <text class="caption" x="247" y="272">Edit Release PR</text>
 
-  <circle cx="472" cy="245" r="12" fill="#126851"/>
-  <text class="num" x="472" y="245">3</text>
-  <text class="caption-strong" x="491" y="250">main にマージ</text>
-  <text class="caption" x="491" y="272">チェック通過後</text>
+  <circle cx="416" cy="245" r="12" fill="#126851"/>
+  <text class="num" x="416" y="245">3</text>
+  <text class="caption-strong" x="435" y="250">Merge to main</text>
+  <text class="caption" x="435" y="272">After checks pass</text>
 
-  <circle cx="632" cy="245" r="12" fill="#a87b12"/>
-  <text class="num" x="632" y="245">4</text>
-  <text class="caption-strong" x="651" y="250">本番デプロイ</text>
-  <text class="caption" x="651" y="272">成功後にタグ付け</text>
+  <circle cx="604" cy="245" r="12" fill="#a87b12"/>
+  <text class="num" x="604" y="245">4</text>
+  <text class="caption-strong" x="623" y="250">Deploy to prod</text>
+  <text class="caption" x="623" y="272">Tags after success</text>
 
   <path d="M24 300H776" stroke="#d6dfe9" stroke-width="2"/>
 
-  <!-- hotfix -->
-  <text class="heading" x="24" y="340">hotfix</text>
+  <!-- Hotfix -->
+  <text class="heading" x="24" y="340">Hotfix</text>
   <text class="branch" x="24" y="398" fill="#126851">main</text>
   <text class="branch" x="24" y="448" fill="#c0503a">hotfix/*</text>
 
@@ -99,18 +99,18 @@
   <circle cx="500" cy="361" r="12" fill="#a87b12"/>
   <text class="num" x="500" y="361">3</text>
 
-  <circle cx="152" cy="487" r="12" fill="#c0503a"/>
-  <text class="num" x="152" y="487">1</text>
-  <text class="caption-strong" x="171" y="492">main から切る</text>
-  <text class="caption" x="171" y="514">修正をコミット</text>
+  <circle cx="40" cy="487" r="12" fill="#c0503a"/>
+  <text class="num" x="40" y="487">1</text>
+  <text class="caption-strong" x="59" y="492">Branch from main</text>
+  <text class="caption" x="59" y="514">Commit the fix</text>
 
-  <circle cx="312" cy="487" r="12" fill="#126851"/>
-  <text class="num" x="312" y="487">2</text>
-  <text class="caption-strong" x="331" y="492">main にマージ</text>
-  <text class="caption" x="331" y="514">PR に版とノート</text>
+  <circle cx="228" cy="487" r="12" fill="#126851"/>
+  <text class="num" x="228" y="487">2</text>
+  <text class="caption-strong" x="247" y="492">Merge to main</text>
+  <text class="caption" x="247" y="514">Set version &amp; notes</text>
 
-  <circle cx="472" cy="487" r="12" fill="#a87b12"/>
-  <text class="num" x="472" y="487">3</text>
-  <text class="caption-strong" x="491" y="492">本番デプロイ</text>
-  <text class="caption" x="491" y="514">成功後にタグ付け</text>
+  <circle cx="416" cy="487" r="12" fill="#a87b12"/>
+  <text class="num" x="416" y="487">3</text>
+  <text class="caption-strong" x="435" y="492">Deploy to prod</text>
+  <text class="caption" x="435" y="514">Tags after success</text>
 </svg>
