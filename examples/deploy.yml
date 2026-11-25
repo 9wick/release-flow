@@ -6,7 +6,7 @@ on:
     types: [closed]
     branches: [main]
 permissions:
-  contents: write # to record the prod release
+  contents: write # to tag staging versions and record the prod release
 concurrency:
   group: deploy-${{ github.ref }}
   cancel-in-progress: false

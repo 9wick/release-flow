@@ -2,7 +2,7 @@ name: Resolve release
 description: Tell a deploy job which environment it targets, which commit to ship, and its version and release notes.
 inputs:
   token:
-    description: Token for the GitHub API. PRs created with the default GITHUB_TOKEN do not trigger other workflows; pass a GitHub App token to run CI on them.
+    description: Token for the GitHub API. Needs contents write on stg to tag the version. PRs created with the default GITHUB_TOKEN do not trigger other workflows; pass a GitHub App token to run CI on them.
     default: ${{ github.token }}
   production-branch:
     description: Branch that matches production.
@@ -17,9 +17,9 @@ outputs:
   environment:
     description: prod for the production branch, stg for the staging branch, dev for any other branch.
   version:
-    description: The release PR title on prod. On stg and dev, a preview such as 1.2.4-stg.20261123050000.
+    description: The release PR title on prod. On stg, the next sequential preview such as 1.2.4-stg.0, tagged by this action. On dev, a preview such as 1.2.4-dev.20261123050000.
   tag:
-    description: <tag-prefix><version>. Create it after a successful prod deploy so the next version builds on it.
+    description: <tag-prefix><version>. On prod, create it after a successful deploy so the next version builds on it. On stg it already exists.
   notes:
     description: The notes section of the release PR description on prod, empty otherwise.
   sha:

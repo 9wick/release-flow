@@ -38,3 +38,19 @@ const timestamp = (now: Date): string => now.toISOString().replace(/\D/g, "").sl
 // Sorts above the latest release and below the next one, so previews never outrank a release.
 export const previewVersion = (latest: Version | undefined, environment: string, now: Date): string =>
   `${formatVersion(nextPatch(latest))}-${environment}.${timestamp(now)}`;
+
+const sequenceNumber = /^(0|[1-9]\d*)$/;
+
+export const stagingVersion = (latest: Version | undefined, number: number): string =>
+  `${formatVersion(nextPatch(latest))}-stg.${number}`;
+
+// Only tags of the upcoming version count, so the sequence restarts at 0 after each release.
+export const lastStagingNumber = (tags: readonly string[], prefix: string, latest: Version | undefined): number | undefined => {
+  const head = `${prefix}${formatVersion(nextPatch(latest))}-stg.`;
+  const numbers = tags
+    .filter((tag) => tag.startsWith(head))
+    .map((tag) => tag.slice(head.length))
+    .filter((text) => sequenceNumber.test(text))
+    .map(Number);
+  return numbers.length === 0 ? undefined : Math.max(...numbers);
+};
