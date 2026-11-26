@@ -21,9 +21,12 @@ Incoming changes are automatically listed in the Release PR, humans decide the v
 ![Release flow from feature branches through stg and a Release PR to main, plus hotfixes directly to main](docs/images/release-flow.svg)
 
 1. **Merge feature PRs into `stg`.** Merging to `stg` deploys to staging and opens a draft Release PR from `stg` to `main` listing the PRs since the last release. Subsequent merges to `stg` keep updating the same Release PR.
-2. **Prepare the release.** When you are ready to ship, review the PR title (defaulting to the next patch, e.g., `1.2.4` after `1.2.3`; change it to `1.3.0` or `2.0.0` for minor/major bumps) and write user-facing notes inside `<!-- release-flow:notes -->`:
+2. **Prepare the release.** When you are ready to ship, review the PR title (defaulting to the next patch, e.g., `1.2.4` after `1.2.3`; change it to `1.3.0` or `2.0.0` for minor/major bumps) and write user-facing notes under the **Release Notes** heading, inside `<!-- release-flow:notes -->`:
 
    ```markdown
+   ## Release Notes
+   > Edit before merging. This section is copied to the GitHub Release when the PR is merged.
+
    <!-- release-flow:notes -->
    Reduced sync completion time.
    <!-- /release-flow:notes -->

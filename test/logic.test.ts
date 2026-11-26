@@ -52,6 +52,7 @@ test("only the notes section becomes the release notes", () => {
   assert.equal(releaseNotes(body), "Faster sync.");
   assert.equal(releaseNotes(writeSection(notesTemplate, "changes", "* Sync")), "", "template guidance is not notes");
   assert.equal(releaseNotes("Faster sync. written without markers"), "");
+  assert.equal(withNotesSection(notesTemplate), notesTemplate, "the visible heading is added only once");
 });
 
 test("the bot rewrites only the changes section", () => {

@@ -21,9 +21,12 @@
 ![開発ブランチから stg、Release PR を経て main に進むリリースの流れと、main へ直接 PR を出す hotfix の流れ](docs/images/release-flow.ja.svg)
 
 1. **開発ブランチの PR を `stg` にマージする。** `stg` へのマージでステージングにデプロイされ、`stg` から `main` へのドラフト Release PR が開きます。Release PR を開いたまま `stg` に変更を積むと、同じ PR の変更一覧が更新されます。
-2. **リリース準備を整える。** 本番に出すと決めたら、PR タイトルの版（例: 前回が `1.2.3` なら初期値は `1.2.4`、minor/major なら `1.3.0` や `2.0.0` に変更）を確認し、`<!-- release-flow:notes -->` 内に利用者向けの変更を書きます。
+2. **リリース準備を整える。** 本番に出すと決めたら、PR タイトルの版（例: 前回が `1.2.3` なら初期値は `1.2.4`、minor/major なら `1.3.0` や `2.0.0` に変更）を確認し、**Release Notes** 見出しの下、`<!-- release-flow:notes -->` 内に利用者向けの変更を書きます。
 
    ```markdown
+   ## Release Notes
+   > Edit before merging. This section is copied to the GitHub Release when the PR is merged.
+
    <!-- release-flow:notes -->
    同期の完了までにかかる時間を短縮しました。
    <!-- /release-flow:notes -->
