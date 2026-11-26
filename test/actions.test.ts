@@ -99,7 +99,7 @@ test("release-pr opens a draft titled with the next patch and lists the shipped 
   );
   const notes = result.calls.find((call) => call.route === "POST releases/generate-notes")!.body;
   assert.deepEqual(notes, { tag_name: "v1.2.4", target_commitish: "stg", previous_tag_name: "v1.2.3" });
-  assert.match(created.body, /^<!-- release-flow:notes -->/);
+  assert.match(created.body, /^## Release Notes\n[\s\S]*<!-- release-flow:notes -->/);
   assert.equal(body, `${created.body}\n<!-- release-flow:changes -->\n* Faster sync by @a in #5\n<!-- /release-flow:changes -->\n`);
   assert.deepEqual(result.outputs, { "pull-request-number": "7", "pull-request-url": "https://x/pull/7", created: "true" });
 });
@@ -173,7 +173,7 @@ test("check fills in the version and notes section when a hand-made PR opens", a
   assert.doesNotMatch(result.stdout, /PR title must be/, "the filled-in version is what gets checked");
   assert.deepEqual(result.calls.find((call) => call.route === "PATCH pulls/9")!.body, {
     title: "1.2.4",
-    body: `${written}\n\n<!-- release-flow:notes -->\n<!-- Write the release notes for users here. -->\n<!-- /release-flow:notes -->\n`,
+    body: `${written}\n\n## Release Notes\n> Edit before merging. This section is copied to the GitHub Release when the PR is merged.\n\n<!-- release-flow:notes -->\n<!-- Write the release notes for users here. -->\n<!-- /release-flow:notes -->\n`,
   });
 });
 

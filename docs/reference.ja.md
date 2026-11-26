@@ -13,6 +13,9 @@
 `notes` のコメントに挟まれた部分にリリースノートを書きます。`changes` の部分には `release-pr` が変更一覧を書き、`stg` が進むたびに更新します。
 
 ```markdown
+## Release Notes
+> Edit before merging. This section is copied to the GitHub Release when the PR is merged.
+
 <!-- release-flow:notes -->
 同期の完了までにかかる時間を短縮しました。
 <!-- /release-flow:notes -->
@@ -22,9 +25,9 @@
 <!-- /release-flow:changes -->
 ```
 
-GitHub Release に使うのは `notes` 内の文章だけです。欄内の HTML コメント、変更一覧（`changes`）、欄外のメモは含まれません。
+GitHub Release に使うのは `notes` 内の文章だけです。欄内の HTML コメント、変更一覧（`changes`）、`Release Notes` 見出しを含む欄外の文章は含まれません。
 
-`release-pr` は PR の作成時にタイトルの初期値と空の `notes` 欄を入れます。`check` も PR を開いたとき（`opened`）かドラフトを解除したとき（`ready_for_review`）に、不足している初期値を補います。版らしいタイトル（例 `v1.3`）は上書きせずに保持し、形式の誤りをチェックで報告します。その後の編集では、タイトルとリリースノートを検証します。
+`release-pr` は PR の作成時にタイトルの初期値と、表示画面で見える `Release Notes` 見出し付きの空の `notes` 欄を入れます。`check` も PR を開いたとき（`opened`）かドラフトを解除したとき（`ready_for_review`）に、不足している初期値を補います。版らしいタイトル（例 `v1.3`）は上書きせずに保持し、形式の誤りをチェックで報告します。その後の編集では、タイトルとリリースノートを検証します。
 
 ## 版の決まり方
 

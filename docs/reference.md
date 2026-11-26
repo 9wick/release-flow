@@ -13,6 +13,9 @@ Write the version in `major.minor.patch` format (e.g., `1.2.3`) without a leadin
 Write user-facing release notes between the `notes` comment markers. `release-pr` writes and updates the generated change list inside the `changes` markers whenever `stg` advances:
 
 ```markdown
+## Release Notes
+> Edit before merging. This section is copied to the GitHub Release when the PR is merged.
+
 <!-- release-flow:notes -->
 Reduced sync completion time.
 <!-- /release-flow:notes -->
@@ -22,9 +25,9 @@ Reduced sync completion time.
 <!-- /release-flow:changes -->
 ```
 
-Only the text inside `notes` is included in the GitHub Release (HTML comments inside the section, the `changes` section, and any text outside the markers are excluded).
+Only the text inside `notes` is included in the GitHub Release (HTML comments inside the section, the `changes` section, and any text outside the markers, including the `Release Notes` heading, are excluded).
 
-When `release-pr` opens a PR, it fills in the default title and an empty `notes` section. When `check` runs on `opened` or `ready_for_review`, it also fills in any missing defaults. Existing version-like titles (e.g., `v1.3`) are preserved so `check` reports the format error instead of overwriting them. Subsequent edits validate both the title and release notes.
+When `release-pr` opens a PR, it fills in the default title and an empty `notes` section under a visible `Release Notes` heading. When `check` runs on `opened` or `ready_for_review`, it also fills in any missing defaults. Existing version-like titles (e.g., `v1.3`) are preserved so `check` reports the format error instead of overwriting them. Subsequent edits validate both the title and release notes.
 
 ## Versioning
 
