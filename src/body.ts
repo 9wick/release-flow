@@ -24,7 +24,7 @@ export const writeSection = (body: string, section: Section, content: string): s
 // Markers are invisible in the rendered PR, so a visible heading tells people where to write.
 // It sits outside the markers to stay out of the release, and is added only with a new section so it never repeats.
 const notesHeading =
-  "## Release Notes\n> Edit before merging. This section is copied to the GitHub Release when the PR is merged.";
+  "## Release Notes\n> Edit before merging. The text below becomes the release notes for this version.";
 
 export const withNotesSection = (body: string): string =>
   readSection(body, "notes") === undefined
