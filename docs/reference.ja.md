@@ -14,7 +14,7 @@
 
 ```markdown
 ## Release Notes
-> Edit before merging. This section is copied to the GitHub Release when the PR is merged.
+> Edit before merging. The text below becomes the release notes for this version.
 
 <!-- release-flow:notes -->
 同期の完了までにかかる時間を短縮しました。

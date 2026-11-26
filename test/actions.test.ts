@@ -173,7 +173,7 @@ test("check fills in the version and notes section when a hand-made PR opens", a
   assert.doesNotMatch(result.stdout, /PR title must be/, "the filled-in version is what gets checked");
   assert.deepEqual(result.calls.find((call) => call.route === "PATCH pulls/9")!.body, {
     title: "1.2.4",
-    body: `${written}\n\n## Release Notes\n> Edit before merging. This section is copied to the GitHub Release when the PR is merged.\n\n<!-- release-flow:notes -->\n<!-- Write the release notes for users here. -->\n<!-- /release-flow:notes -->\n`,
+    body: `${written}\n\n## Release Notes\n> Edit before merging. The text below becomes the release notes for this version.\n\n<!-- release-flow:notes -->\n<!-- Write the release notes for users here. -->\n<!-- /release-flow:notes -->\n`,
   });
 });
 
